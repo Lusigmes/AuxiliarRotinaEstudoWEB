@@ -7,6 +7,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import disciplina.lip.AuxiliarRotinaEstudo.dto.RevisaoResponseDTO;
 import disciplina.lip.AuxiliarRotinaEstudo.model.entity.Estudo;
 import disciplina.lip.AuxiliarRotinaEstudo.model.entity.Revisao;
 import disciplina.lip.AuxiliarRotinaEstudo.model.entity.Usuario;
@@ -28,7 +29,7 @@ public class RevisaoService {
         revisaoRepository.save(revisao);
     }
     
-    public void controleDeRevisoes(Estudo estudo){
+    public void controleDeRevisoes(Estudo estudo){ // criar uma revisao para n+1 n+7 n+14 dias
         LocalDate diaDoEstudo = estudo.getDiaDoEstudo();
 
         salvar(estudo, diaDoEstudo.plusDays(1));
@@ -37,7 +38,7 @@ public class RevisaoService {
     }
 
     @Transactional
-    public void recalcularRevisoes(Estudo estudo) {
+    public void recalcularRevisoes(Estudo estudo) { // durante edição do dia do estudo
 
         List<Revisao> revisoesExistentes = revisaoRepository.findByEstudoId(estudo.getId());
         
@@ -46,13 +47,15 @@ public class RevisaoService {
     }
 
     @Transactional
-    public void concluirStatausRevisao(Long idRevisao){
+    public Revisao concluirStatausRevisao(Long idRevisao){ // alterar concluida para true
         Revisao revisao = revisaoRepository.findRevisaoById(idRevisao);
         if (revisao == null) {
             throw new IllegalArgumentException("Revisão não encontrada com ID: " + idRevisao);
         }
         revisao.setConcluida(true);
-        revisaoRepository.save(revisao);
+        Revisao revisaoSalva = revisaoRepository.save(revisao);
+
+        return revisaoSalva;
     }
 
     // buscar revisoes por id do estudo
@@ -63,5 +66,10 @@ public class RevisaoService {
     
     public List<Revisao> listarRevisoesAtrasadas(Usuario usuario){
         return revisaoRepository.findRevisoesAtrasadasByUsuario(usuario, LocalDate.now());
+    }
+
+    public RevisaoResponseDTO revisaoToDTO(Revisao revisao){
+        return new RevisaoResponseDTO(
+            revisao.getId(), revisao.getDataRevisao(), revisao.getConcluida(), revisao.getEstudoId());
     }
 }

@@ -2,9 +2,6 @@ package disciplina.lip.AuxiliarRotinaEstudo.dto;
 
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
-
-import com.fasterxml.jackson.annotation.JsonFormat;
-
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 
@@ -21,7 +18,7 @@ public record EstudoDTO(
     @NotNull
     String diaDoEstudo
 ) {
-       public LocalDate getDiaDoEstudo() {
+    public LocalDate getDiaDoEstudo() {
         try {
             DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd/MM/yyyy");
             return LocalDate.parse(this.diaDoEstudo, formatter);

@@ -29,9 +29,13 @@ public class Revisao {
     private LocalDate dataRevisao;
     
     @Column(nullable=false)
-    private boolean concluida;
+    private Boolean concluida;
 
     @ManyToOne
     @JoinColumn(name = "estudo_id", nullable = false)
     private Estudo estudo;
+
+    public long getEstudoId(){
+        return this.estudo.getId();
+    }
 }

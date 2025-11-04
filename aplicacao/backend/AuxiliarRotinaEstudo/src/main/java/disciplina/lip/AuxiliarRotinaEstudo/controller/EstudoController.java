@@ -3,9 +3,11 @@ package disciplina.lip.AuxiliarRotinaEstudo.controller;
 import java.util.List;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.CrossOrigin;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -22,6 +24,7 @@ import disciplina.lip.AuxiliarRotinaEstudo.dto.EstudoDTO;
 import disciplina.lip.AuxiliarRotinaEstudo.dto.EstudoUpdateDTO;
 import disciplina.lip.AuxiliarRotinaEstudo.model.entity.Usuario;
 import disciplina.lip.AuxiliarRotinaEstudo.model.entity.Estudo;
+import disciplina.lip.AuxiliarRotinaEstudo.repository.EstudoRepository;
 
 
 @RestController
@@ -30,6 +33,8 @@ public class EstudoController {
     
     @Autowired
     private EstudoService estudoService;
+    @Autowired
+    private EstudoRepository estudoRepository;
 
     @CrossOrigin
     @PostMapping
@@ -55,6 +60,13 @@ public class EstudoController {
     ){
         Estudo esudoAtualizado = estudoService.atualizar(dto, idEstudo);
         return ResponseEntity.ok(estudoService.estudoToDTO(esudoAtualizado));
+    }
+
+    @CrossOrigin
+    @DeleteMapping("/{idEstudo}")
+    public ResponseEntity<Estudo> deletar(@PathVariable long idEstudo){
+        estudoRepository.deleteById(idEstudo);
+        return ResponseEntity.status(HttpStatus.NO_CONTENT).build();
     }
     
 }
