@@ -7,8 +7,6 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.bind.annotation.PutMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-
 import disciplina.lip.AuxiliarRotinaEstudo.dto.RevisaoResponseDTO;
 import disciplina.lip.AuxiliarRotinaEstudo.model.entity.Revisao;
 import disciplina.lip.AuxiliarRotinaEstudo.service.RevisaoService;

@@ -13,9 +13,9 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import disciplina.lip.AuxiliarRotinaEstudo.dto.LoginTokenResponseDTO;
-import disciplina.lip.AuxiliarRotinaEstudo.dto.UsuarioResponseDTO;
 import disciplina.lip.AuxiliarRotinaEstudo.dto.LoginUsuarioDTO;
 import disciplina.lip.AuxiliarRotinaEstudo.dto.RegistroUsuarioDTO;
+import disciplina.lip.AuxiliarRotinaEstudo.dto.UsuarioResponseDTO;
 import disciplina.lip.AuxiliarRotinaEstudo.model.entity.Usuario;
 import disciplina.lip.AuxiliarRotinaEstudo.repository.UsuarioRepository;
 import disciplina.lip.AuxiliarRotinaEstudo.service.JwtAuthService;

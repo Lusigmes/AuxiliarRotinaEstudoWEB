@@ -1,15 +1,11 @@
 package disciplina.lip.AuxiliarRotinaEstudo.dto;
 
 import disciplina.lip.AuxiliarRotinaEstudo.model.enums.DiaSemana;
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
 
-public record ItemCronogramaDTO(
-    @NotNull
+public record ItemCronogramaResponseDTO(
+    long id,
     DiaSemana diaSemana,
-    
-    @NotBlank
     String nomeDisciplina
 ) {
-
+    
 }

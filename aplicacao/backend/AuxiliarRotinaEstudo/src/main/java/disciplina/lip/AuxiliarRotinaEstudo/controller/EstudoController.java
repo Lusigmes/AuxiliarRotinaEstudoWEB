@@ -12,15 +12,12 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
-
 import disciplina.lip.AuxiliarRotinaEstudo.service.EstudoService;
-
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
-
-import disciplina.lip.AuxiliarRotinaEstudo.dto.EstudoResponseDTO;
 import disciplina.lip.AuxiliarRotinaEstudo.dto.EstudoDTO;
+import disciplina.lip.AuxiliarRotinaEstudo.dto.EstudoResponseDTO;
 import disciplina.lip.AuxiliarRotinaEstudo.dto.EstudoUpdateDTO;
 import disciplina.lip.AuxiliarRotinaEstudo.model.entity.Usuario;
 import disciplina.lip.AuxiliarRotinaEstudo.model.entity.Estudo;
@@ -44,6 +41,7 @@ public class EstudoController {
         Estudo estudoSalvo = estudoService.salvar(dto, usuario);
         return ResponseEntity.ok(estudoService.estudoToDTO(estudoSalvo));
     }
+    
     @CrossOrigin
     @GetMapping
     public ResponseEntity<List<EstudoResponseDTO>> listarEstudosDoUsuario(

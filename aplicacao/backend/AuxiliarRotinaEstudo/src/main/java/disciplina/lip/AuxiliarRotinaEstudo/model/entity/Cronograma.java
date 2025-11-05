@@ -31,7 +31,10 @@ public class Cronograma {
     private List<ItemCronogramaDiario> itemDoDia;
     
     @OneToOne
-    @JoinColumn(name = "usuario_id", referencedColumnName = "id")
+    @JoinColumn(name = "usuario_id", referencedColumnName = "id", nullable=false)
     private Usuario usuario;
 
+    public long getUsuarioId(){
+        return this.usuario.getId();
+    }
 }
