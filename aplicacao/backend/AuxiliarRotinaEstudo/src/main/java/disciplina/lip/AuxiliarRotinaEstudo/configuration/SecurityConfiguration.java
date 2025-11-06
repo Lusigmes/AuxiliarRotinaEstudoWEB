@@ -62,8 +62,8 @@ public class SecurityConfiguration {
     CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
 
-        configuration.setAllowedOrigins(List.of("http://localhost:8080")); //      http://localhost:8080 //   "http://localhost:5173", // Vue Vite         "http://localhost:3000"  // alternativa
-        // configuration.setAllowedOrigins(List.of("http://localhost:5173")); //para o front //      http://localhost:8080 //   "http://localhost:5173", // Vue Vite         "http://localhost:3000"  // alternativa
+        // configuration.setAllowedOrigins(List.of("http://localhost:8080")); // testar api     
+        configuration.setAllowedOrigins(List.of("http://localhost:5173")); // comunicar com o front
         configuration.setAllowedMethods(List.of("GET","POST","PUT","DELETE","OPTIONS")); 
         configuration.setAllowedHeaders(List.of("Authorization","Content-Type"));
     // configuration.setAllowCredentials(true); // se quiser cookies no futuro

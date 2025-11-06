@@ -41,4 +41,7 @@ public class Revisao {
     public Long getEstudoId(){
         return this.estudo.getId();
     }
+    public LocalDate getDiaEstudo(){
+        return this.estudo.getDiaDoEstudo();
+    }
 }

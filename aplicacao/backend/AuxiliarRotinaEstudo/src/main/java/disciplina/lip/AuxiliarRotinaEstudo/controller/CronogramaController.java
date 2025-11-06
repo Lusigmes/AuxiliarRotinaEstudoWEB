@@ -1,6 +1,5 @@
 package disciplina.lip.AuxiliarRotinaEstudo.controller;
 
-import java.util.List;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -24,10 +23,7 @@ import disciplina.lip.AuxiliarRotinaEstudo.model.entity.Usuario;
 import disciplina.lip.AuxiliarRotinaEstudo.repository.CronogramaRepository;
 import disciplina.lip.AuxiliarRotinaEstudo.service.CronogramaService;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
-import disciplina.lip.AuxiliarRotinaEstudo.dto.ItemCronogramaDTO;
 
 @RestController
 @RequestMapping("/cronogramas")
@@ -38,7 +34,6 @@ public class CronogramaController {
     @Autowired
     private CronogramaRepository cronogramaRepository;
 
-    private static final Logger logger = LoggerFactory.getLogger(CronogramaController.class);
 
     @CrossOrigin
     @PostMapping

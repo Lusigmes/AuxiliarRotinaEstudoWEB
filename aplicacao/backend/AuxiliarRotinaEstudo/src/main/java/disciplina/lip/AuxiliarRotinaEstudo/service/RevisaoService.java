@@ -8,6 +8,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import disciplina.lip.AuxiliarRotinaEstudo.dto.RevisaoResponseDTO;
+import disciplina.lip.AuxiliarRotinaEstudo.dto.RevisaoUpdateDTO;
 import disciplina.lip.AuxiliarRotinaEstudo.model.entity.Estudo;
 import disciplina.lip.AuxiliarRotinaEstudo.model.entity.Revisao;
 import disciplina.lip.AuxiliarRotinaEstudo.model.entity.Usuario;
@@ -49,13 +50,38 @@ public class RevisaoService {
     @Transactional
     public Revisao concluirStatausRevisao(Long idRevisao){ // alterar concluida para true
         Revisao revisao = revisaoRepository.findRevisaoById(idRevisao);
+        
         if (revisao == null) {
             throw new IllegalArgumentException("Revisão não encontrada com ID: " + idRevisao);
         }
+        
         revisao.setConcluida(true);
         Revisao revisaoSalva = revisaoRepository.save(revisao);
-
+        
         return revisaoSalva;
+    }
+    
+    @Transactional
+    public Revisao alterarDataRevisao(Long idRevisao, RevisaoUpdateDTO data){
+        Revisao revisao = revisaoRepository.findRevisaoById(idRevisao);
+        
+        if (revisao == null) {
+            throw new IllegalArgumentException("Revisão não encontrada com ID: " + idRevisao);
+        }
+
+        // LocalDate novaData = data.getDataRevisao();
+    
+        if(data.dataRevisao().isBefore(LocalDate.now())){
+            throw new IllegalArgumentException("Data da revisão não pode ser no passado");
+        }
+        
+        if(data.dataRevisao().isBefore(revisao.getDataRevisao())){
+            throw new IllegalArgumentException("Data da revisão não pode ser antes do estudo responsável"); 
+        }
+        
+        revisao.setDataRevisao(data.dataRevisao());
+        return revisaoRepository.save(revisao);
+
     }
 
     // buscar revisoes por id do estudo
