@@ -6,11 +6,11 @@ import com.fasterxml.jackson.annotation.JsonFormat;
 
 
 public record RevisaoResponseDTO(
-    long id,
+    Long id,
     @JsonFormat(pattern = "dd/MM/yyyy")
     LocalDate dataRevisao,
     Boolean concluida,
-    long idEstudo
+    Long idEstudo
 
 ) {
 

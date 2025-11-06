@@ -1,5 +1,6 @@
 package disciplina.lip.AuxiliarRotinaEstudo.service;
 
+import java.time.LocalDate;
 import java.util.List;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -12,7 +13,6 @@ import disciplina.lip.AuxiliarRotinaEstudo.dto.EstudoUpdateDTO;
 import disciplina.lip.AuxiliarRotinaEstudo.model.entity.Estudo;
 import disciplina.lip.AuxiliarRotinaEstudo.model.entity.Usuario;
 import disciplina.lip.AuxiliarRotinaEstudo.repository.EstudoRepository;
-import disciplina.lip.AuxiliarRotinaEstudo.repository.UsuarioRepository;
 
 @Service
 public class EstudoService {
@@ -20,8 +20,7 @@ public class EstudoService {
     private EstudoRepository estudoRepository;
     @Autowired
     private RevisaoService revisaoService;
-    // @Autowired
-    // private UsuarioRepository usuarioRepository;
+
 
     @Transactional
     public Estudo salvar(EstudoDTO dto, Usuario usuario){
@@ -40,15 +39,15 @@ public class EstudoService {
     }
 
     @Transactional
-    public Estudo atualizar(EstudoUpdateDTO dto, long idEstudo){
+    public Estudo atualizar(EstudoUpdateDTO dto, Long idEstudo){
         Estudo estudo = estudoRepository.findEstudoById(idEstudo);
         
         if(estudo == null){
             throw new RuntimeException("Estudo não encontrado");
         }
         
-        boolean dataAlterada = !estudo.getDiaDoEstudo().equals(dto.diaDoEstudo());
-        
+        // boolean dataAlterada = !estudo.getDiaDoEstudo().equals(dto.diaDoEstudo());
+        boolean dataAlterada = !estudo.getDiaDoEstudo().equals(LocalDate.parse(dto.diaDoEstudo()));
         
         estudo.setNomeDisciplina(dto.nomeDisciplina());
         estudo.setTema(dto.tema());

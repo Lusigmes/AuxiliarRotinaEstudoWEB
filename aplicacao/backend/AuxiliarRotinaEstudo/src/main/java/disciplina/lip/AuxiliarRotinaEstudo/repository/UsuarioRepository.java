@@ -14,7 +14,7 @@ public interface UsuarioRepository extends JpaRepository<Usuario, Long> {
     Usuario findByEmailWithEstudos(@Param("email") String email);
 
     @Query("SELECT u FROM Usuario u JOIN FETCH u.estudos WHERE u.id = :id ")
-    Usuario findByIdWithEstudos(@Param("id") long id);
+    Usuario findByIdWithEstudos(@Param("id") Long id);
 
     @Query(" SELECT u FROM Usuario u JOIN FETCH u.cronograma WHERE u.email = :email")
     Usuario findByEmailWithCronograma(@Param("email") String email);

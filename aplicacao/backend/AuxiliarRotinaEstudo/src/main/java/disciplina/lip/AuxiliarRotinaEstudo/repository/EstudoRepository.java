@@ -17,6 +17,6 @@ public interface EstudoRepository extends JpaRepository<Estudo, Long> {
     List<Estudo> findEstudoByUsuario(@Param("usuario") Usuario usuario);
     
     @Query("SELECT e FROM Estudo e LEFT JOIN e.usuario WHERE e.id = :idEstudo")
-    Estudo findEstudoById(@Param("idEstudo") long idEstudo);
+    Estudo findEstudoById(@Param("idEstudo") Long idEstudo);
 
 }

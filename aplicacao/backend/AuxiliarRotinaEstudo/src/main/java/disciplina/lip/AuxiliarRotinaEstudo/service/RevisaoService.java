@@ -63,6 +63,9 @@ public class RevisaoService {
     public List<Revisao> listarRevisoesPendentes(Usuario usuario){
         return revisaoRepository.findRevisoesPendentesByUsuario(usuario, LocalDate.now());
     }
+    public List<Revisao> listarRevisoes(Usuario usuario){
+        return revisaoRepository.findRevisoesByUsuario(usuario);
+    }
     
     public List<Revisao> listarRevisoesAtrasadas(Usuario usuario){
         return revisaoRepository.findRevisoesAtrasadasByUsuario(usuario, LocalDate.now());
@@ -72,4 +75,6 @@ public class RevisaoService {
         return new RevisaoResponseDTO(
             revisao.getId(), revisao.getDataRevisao(), revisao.getConcluida(), revisao.getEstudoId());
     }
+
+    // alterar data das revisoes
 }

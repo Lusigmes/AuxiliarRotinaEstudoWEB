@@ -22,7 +22,10 @@ public interface RevisaoRepository extends JpaRepository<Revisao, Long> {
     List<Revisao> findRevisoesAtrasadasByUsuario(@Param("usuario") Usuario usuario, @Param("hoje") LocalDate hoje);
     
     @Query("SELECT r FROM Revisao r JOIN FETCH r.estudo e WHERE e.id = :idEstudo")
-    List<Revisao> findByEstudoId(@Param("idEstudo") long idEstudo);
+    List<Revisao> findByEstudoId(@Param("idEstudo") Long idEstudo);
+
+    @Query("SELECT r FROM Revisao r JOIN FETCH r.estudo e JOIN FETCH e.usuario WHERE e.usuario = :usuario")
+    List<Revisao> findRevisoesByUsuario(@Param("usuario") Usuario usuario);
 
     @Query("SELECT r FROM Revisao r JOIN FETCH r.estudo e WHERE e.usuario = :usuario AND r.concluida = :concluida")
     List<Revisao> findByEstudoUsuarioAndConcluida(@Param("usuario") Usuario usuario, @Param("concluida") boolean concluida);

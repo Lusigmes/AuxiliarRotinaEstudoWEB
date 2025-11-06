@@ -11,9 +11,12 @@ import disciplina.lip.AuxiliarRotinaEstudo.model.entity.Usuario;
 @RepositoryRestResource(collectionResourceRel="cronograma",path="cronograma")
 public interface CronogramaRepository extends JpaRepository<Cronograma, Long> {
     
-    @Query("SELECT c FROM Cronograma c WHERE c.usuario = :usuario")
+    @Query("SELECT c FROM Cronograma c LEFT JOIN FETCH c.itemDoDia WHERE c.usuario = :usuario")
     Cronograma findCronogramaByUsuario(@Param("usuario") Usuario usuario);
 
-    @Query("SELECT c FROM Cronograma c WHERE c.usuario.id = :idUsuario")
+    @Query("SELECT c FROM Cronograma c LEFT JOIN FETCH c.itemDoDia WHERE c.usuario.id = :idUsuario")
     Cronograma findByUsuarioId(@Param("idUsuario") Long idUsuario);
+    
+    @Query("SELECT c FROM Cronograma c LEFT JOIN FETCH c.itemDoDia WHERE c.id = :idCronograma")
+    Cronograma findByIdCronograma(@Param("idCronograma") Long idCronograma);
 }

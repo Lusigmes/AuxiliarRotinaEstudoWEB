@@ -7,6 +7,8 @@ import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 
+import com.fasterxml.jackson.annotation.JsonManagedReference;
+
 import disciplina.lip.AuxiliarRotinaEstudo.model.enums.RoleUsuario;
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
@@ -33,7 +35,7 @@ public class Usuario implements UserDetails{
     @Id
     @Column
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private long id;
+    private Long id;
     
     @Column(nullable=false)
     private String nome;
@@ -45,9 +47,11 @@ public class Usuario implements UserDetails{
     private String senha;
 
     @OneToMany(mappedBy = "usuario", cascade = CascadeType.ALL, orphanRemoval = true)
+    @JsonManagedReference("usuario_estudos")
     private List<Estudo> estudos;
-
+    
     @OneToOne(mappedBy = "usuario", cascade = CascadeType.ALL, orphanRemoval = true)
+    @JsonManagedReference("usuario_cronograma")
     private Cronograma cronograma;
 
     @Enumerated(EnumType.STRING)
@@ -86,5 +90,9 @@ public class Usuario implements UserDetails{
     @Override
     public boolean isEnabled() {
         return true;
+    }
+    
+    public long getIdPrimitivo(){ // alternativa para if em adicionarNovoItemCronograma
+        return this.id;
     }
 }

@@ -1,5 +1,7 @@
 package disciplina.lip.AuxiliarRotinaEstudo.model.entity;
 
+import com.fasterxml.jackson.annotation.JsonBackReference;
+
 import disciplina.lip.AuxiliarRotinaEstudo.model.enums.DiaSemana;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -25,7 +27,7 @@ public class ItemCronogramaDiario {
     @Id
     @Column
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private long id;
+    private Long id;
     
     @Column(nullable=false)
     @Enumerated(EnumType.STRING)   
@@ -36,6 +38,11 @@ public class ItemCronogramaDiario {
     
     @ManyToOne
     @JoinColumn(name="cronograma_id")
+    @JsonBackReference("cronograma_itens")
     private Cronograma cronograma;
+
+    public Long getIdUsuarioDoCronograma(){
+        return this.cronograma.getUsuarioId();   
+    }
     
 }

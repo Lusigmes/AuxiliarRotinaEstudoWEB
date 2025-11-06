@@ -25,7 +25,7 @@ public class JwtAuthService {
     private String secretKey;
     
     @Value("${security.jwt.expiration-time}")
-    private long jwtExpiration;
+    private Long jwtExpiration;
 
     private Key getSignInKey(){
         try {
@@ -53,7 +53,7 @@ public class JwtAuthService {
         return extractClaim(token, Claims::getSubject);
     }
 
-    public long getExpirationTime(){
+    public Long getExpirationTime(){
         return jwtExpiration;
     }
 
@@ -64,7 +64,7 @@ public class JwtAuthService {
         return buildToken(extraClaims, user, jwtExpiration);
     }
 
-    private String buildToken(Map<String, Object> extraClaims, UserDetails user, long expiration){
+    private String buildToken(Map<String, Object> extraClaims, UserDetails user, Long expiration){
         return Jwts 
             .builder()
             .setClaims(extraClaims)

@@ -53,7 +53,7 @@ public class EstudoController {
     @CrossOrigin
     @PutMapping("/{idEstudo}")
     public ResponseEntity<EstudoResponseDTO> atualizar(
-        @PathVariable long idEstudo,
+        @PathVariable Long idEstudo,
         @RequestBody EstudoUpdateDTO dto
     ){
         Estudo esudoAtualizado = estudoService.atualizar(dto, idEstudo);
@@ -62,7 +62,7 @@ public class EstudoController {
 
     @CrossOrigin
     @DeleteMapping("/{idEstudo}")
-    public ResponseEntity<Estudo> deletar(@PathVariable long idEstudo){
+    public ResponseEntity<Estudo> deletar(@PathVariable Long idEstudo){
         estudoRepository.deleteById(idEstudo);
         return ResponseEntity.status(HttpStatus.NO_CONTENT).build();
     }

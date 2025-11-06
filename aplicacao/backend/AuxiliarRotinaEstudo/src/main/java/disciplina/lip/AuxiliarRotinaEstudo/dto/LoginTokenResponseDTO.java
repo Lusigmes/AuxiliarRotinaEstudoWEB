@@ -6,7 +6,7 @@ import lombok.Data;
 @Data
 public class LoginTokenResponseDTO {
     private String token;
-    private long expiresIn;
+    private Long expiresIn;
 
 
     public LoginTokenResponseDTO setToken(String token) {
@@ -14,7 +14,7 @@ public class LoginTokenResponseDTO {
         return this;
     }
     
-    public LoginTokenResponseDTO setExpiresIn(long expiresIn) {
+    public LoginTokenResponseDTO setExpiresIn(Long expiresIn) {
         this.expiresIn = expiresIn;
         return this;
     }

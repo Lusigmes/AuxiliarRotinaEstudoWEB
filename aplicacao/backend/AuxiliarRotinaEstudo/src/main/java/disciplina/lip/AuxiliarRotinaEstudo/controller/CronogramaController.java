@@ -1,5 +1,7 @@
 package disciplina.lip.AuxiliarRotinaEstudo.controller;
 
+import java.util.List;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -7,23 +9,25 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import disciplina.lip.AuxiliarRotinaEstudo.dto.AdicionarItensCronogramaDTO;
 import disciplina.lip.AuxiliarRotinaEstudo.dto.CronogramaDTO;
 import disciplina.lip.AuxiliarRotinaEstudo.dto.CronogramaResponseDTO;
-import disciplina.lip.AuxiliarRotinaEstudo.dto.EstudoResponseDTO;
-import disciplina.lip.AuxiliarRotinaEstudo.dto.EstudoUpdateDTO;
 import disciplina.lip.AuxiliarRotinaEstudo.model.entity.Cronograma;
-import disciplina.lip.AuxiliarRotinaEstudo.model.entity.Estudo;
 import disciplina.lip.AuxiliarRotinaEstudo.model.entity.Usuario;
 import disciplina.lip.AuxiliarRotinaEstudo.repository.CronogramaRepository;
 import disciplina.lip.AuxiliarRotinaEstudo.service.CronogramaService;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import disciplina.lip.AuxiliarRotinaEstudo.dto.ItemCronogramaDTO;
 
 @RestController
 @RequestMapping("/cronogramas")
@@ -34,6 +38,8 @@ public class CronogramaController {
     @Autowired
     private CronogramaRepository cronogramaRepository;
 
+    private static final Logger logger = LoggerFactory.getLogger(CronogramaController.class);
+
     @CrossOrigin
     @PostMapping
     public ResponseEntity<CronogramaResponseDTO> salvar(@AuthenticationPrincipal Usuario usuario, @RequestBody CronogramaDTO dto ){
@@ -42,9 +48,19 @@ public class CronogramaController {
     }
 
     @CrossOrigin
+    @PostMapping("/{idCronograma}/adicionarItens")
+    public ResponseEntity<CronogramaResponseDTO> adicionarNovosItensNoCronograma(
+            @PathVariable Long idCronograma, 
+            @AuthenticationPrincipal Usuario usuario,
+            @RequestBody AdicionarItensCronogramaDTO novos_itens_cronograma ){
+        Cronograma cronogramaSalvo = cronogramaService.adicionarItensNoCronograma(idCronograma, novos_itens_cronograma.itensDoDia(), usuario);
+        return ResponseEntity.ok(cronogramaService.cronogramaToDTO(cronogramaSalvo));
+    }
+
+    @CrossOrigin
     @PutMapping("/{idCronograma}")
     public ResponseEntity<CronogramaResponseDTO> atualizar(
-        @PathVariable long idCronograma,
+        @PathVariable Long idCronograma,
         @AuthenticationPrincipal Usuario usuario,
         @RequestBody CronogramaDTO dto
     ){
@@ -61,14 +77,14 @@ public class CronogramaController {
 
     @CrossOrigin
     @GetMapping
-    public ResponseEntity<CronogramaResponseDTO> visulizar(@AuthenticationPrincipal Usuario usuario){
+    public ResponseEntity<CronogramaResponseDTO> visulizarCronogramaDoUsuario(@AuthenticationPrincipal Usuario usuario){
         Cronograma cronograma = cronogramaService.buscarCronogramaDoUsuario(usuario);
         return ResponseEntity.ok(cronogramaService.cronogramaToDTO(cronograma));
     }
 
     @CrossOrigin
     @DeleteMapping("/{idCronograma}")
-    public ResponseEntity<Estudo> deletar(@PathVariable long idCronograma){
+    public ResponseEntity<Cronograma> deletar(@PathVariable Long idCronograma){
         cronogramaRepository.deleteById(idCronograma);
         return ResponseEntity.status(HttpStatus.NO_CONTENT).build();
     }

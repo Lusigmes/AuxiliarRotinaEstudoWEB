@@ -2,6 +2,8 @@ package disciplina.lip.AuxiliarRotinaEstudo.model.entity;
 
 import java.time.LocalDate;
 
+import com.fasterxml.jackson.annotation.JsonBackReference;
+
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
@@ -23,7 +25,7 @@ public class Revisao {
     @Id
     @Column
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private long id;
+    private Long id;
     
     @Column(nullable=false)
     private LocalDate dataRevisao;
@@ -33,9 +35,10 @@ public class Revisao {
 
     @ManyToOne
     @JoinColumn(name = "estudo_id", nullable = false)
+    @JsonBackReference("estudo_revisoes")
     private Estudo estudo;
 
-    public long getEstudoId(){
+    public Long getEstudoId(){
         return this.estudo.getId();
     }
 }

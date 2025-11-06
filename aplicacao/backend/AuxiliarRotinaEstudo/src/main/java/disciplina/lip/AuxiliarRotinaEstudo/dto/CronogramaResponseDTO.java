@@ -3,8 +3,8 @@ package disciplina.lip.AuxiliarRotinaEstudo.dto;
 import java.util.List;
 
 public record CronogramaResponseDTO(
-    long id,
-    long idUsuario,
+    Long id,
+    Long idUsuario,
     List<ItemCronogramaResponseDTO> itensDoDia
 ) {
     

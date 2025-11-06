@@ -49,13 +49,40 @@ public class CronogramaService {
             item.setCronograma(cronogramaSalvo);
             
             
-            ItemCronogramaDiario itemSalavo = itemCronogramaDiarioRepository.save(item);
-            cronogramaSalvo.getItemDoDia().add(itemSalavo);
+            ItemCronogramaDiario itemSalvo = itemCronogramaDiarioRepository.save(item);
+            cronogramaSalvo.getItemDoDia().add(itemSalvo);
         }
 
         return cronogramaSalvo;
     }
 
+    @Transactional
+    public Cronograma adicionarItensNoCronograma(Long idCronograma, List<ItemCronogramaDTO> novos_dtos, Usuario usuario){
+        Cronograma  cronograma = cronogramaRepository.findByIdCronograma(idCronograma);
+
+        if(cronograma == null ){
+            throw new IllegalArgumentException("Cronograma não encontrado com ID: " + idCronograma);
+        }
+
+        if(cronograma.getUsuarioIdPrimitivo() != usuario.getIdPrimitivo()){
+            throw new SecurityException("Acesso negado");
+        }
+
+        for(ItemCronogramaDTO dtoItem : novos_dtos){
+           
+            ItemCronogramaDiario item = new ItemCronogramaDiario();
+            item.setDiaSemana(dtoItem.diaSemana());
+            item.setNomeDisciplina(dtoItem.nomeDisciplina());
+            item.setCronograma(cronograma);
+            
+            
+            ItemCronogramaDiario itemSalvo = itemCronogramaDiarioRepository.save(item);
+            cronograma.getItemDoDia().add(itemSalvo);
+        }
+
+        return cronogramaRepository.save(cronograma);
+    }
+   
     /* VERIFICAR SITUAÇÃO: QUANDO O USUARIO FOR EDITAR UM CRONOGRAMA CRIAD, OS ITENS CRIADOS ANTES DA EDIÇÃO PERMANECEM OU SÃO EXCLUIDOS? */
     @Transactional
     public Cronograma atualizar(CronogramaDTO dto, Usuario usuariao){
