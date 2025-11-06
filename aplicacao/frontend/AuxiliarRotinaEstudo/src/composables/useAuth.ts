@@ -1,4 +1,4 @@
-import { ref } from "vue";
+import { ref, computed } from "vue";
 import { logarUsuario, registrarUsuario, getUsuarioAutenticado } from "@/api/UsuarioAuthService";
 import type {UsuarioResponseInterface, RegistroUsuarioInterface, LoginUsuarioInterface, LoginTokenResponseInterface } from "@/types";
 import axios from "axios";
@@ -6,11 +6,14 @@ import axios from "axios";
 const token = ref<string | null>(localStorage.getItem("jwt"));
 const usuario = ref<UsuarioResponseInterface | null>(null);
 const error = ref<string | null>(null);
+const loading = ref(false);
 
-export function useAuth(){
-    
+export function useAuth() {
     const login = async (dadosUsuario: LoginUsuarioInterface) => {
         try {
+            loading.value = true;
+            error.value = null;
+            
             const response = await logarUsuario(dadosUsuario);
             token.value = response.token;
             localStorage.setItem("jwt", response.token);
@@ -22,6 +25,8 @@ export function useAuth(){
         } catch (err: any) {
             error.value = err.response?.data?.message || "Falha no login";
             return false;
+        } finally {
+            loading.value = false;
         }
     }
 
@@ -43,21 +48,33 @@ export function useAuth(){
         }
     };
 
-    if (token.value) {
+    if (token.value && !usuario.value) {
         fetchUsuario();
     }
 
     const registro = async (dadosUsuario: RegistroUsuarioInterface) => {
         try {
+            loading.value = true;
+            error.value = null;
+            
             await registrarUsuario(dadosUsuario);
-            await login({email:dadosUsuario.email, senha:dadosUsuario.senha});
-            return true;
+            return await login({email: dadosUsuario.email, senha: dadosUsuario.senha});
         } catch (err: any) {
             error.value = err.response?.data?.message || "Falha no registro";
             return false;
+        } finally {
+            loading.value = false;
         }
     }
 
-    return { token, usuario, error,
-        login, registro, logout, fetchUsuario};
-};
+    return { 
+        token: computed(() => token.value), 
+        usuario: computed(() => usuario.value), 
+        error: computed(() => error.value),
+        loading: computed(() => loading.value),
+        login, 
+        registro, 
+        logout, 
+        fetchUsuario 
+    };
+}

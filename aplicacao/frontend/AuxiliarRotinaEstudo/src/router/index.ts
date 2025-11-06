@@ -1,11 +1,29 @@
 import { createRouter, createWebHistory } from 'vue-router';
-// import { useAuth } from '@/composables/useAuth'
 
 const routes = [
-  { path: "/", name: "Home", component: () => import('@/components/Home.vue') }
-//   { path: "/login", name: "Login", component: () => import('@/components/LoginForm.vue') },
-//   { path: "/registro", name: "Registro", component: () => import('@/components/RegistroForm.vue') },
-  
+    { 
+    path: "/",
+    name: "Home", 
+    redirect: '/login'
+  },
+  { 
+    path: "/login",
+    name: "Login", 
+    component: () => import('@/components/Login.vue'),
+    meta: { requiresAuth: false }
+  },
+  { 
+    path: "/registro",
+    name: "Registro", 
+    component: () => import('@/components/Registro.vue'),
+    meta: { requiresAuth: false }
+  },
+  { 
+    path: "/tela-principal",
+    name: "Tela Principal", 
+    component: () => import('@/views/TelaPrincipal.vue'),
+    meta: { requiresAuth: true }
+  }
 ]
 
 const router = createRouter({
@@ -13,23 +31,16 @@ const router = createRouter({
   routes,
 })
 
-// router.beforeEach(async (to) => { ciclo de rotas? nao lembro
-//   const { token, fetchUsuario, usuario } = useAuth();
-
-//   if (token.value && !usuario.value) {
-//     await fetchUsuario();
-//   }
-//   if (to.meta.requiresAuth && !token.value) {
-//     return "/login";
-//   }
-//   if(token.value && to.path === '/') {
-//     return "/dashboard";
-//   }
-//   if(token.value && (to.path === '/login' || to.path === '/registro')){
-//     return "/dashboard";
-//   }
-
-//   return true; 
-// })
+router.beforeEach((to, from, next) => {
+  const token = localStorage.getItem("jwt");
+  
+  if (to.meta.requiresAuth && !token) {
+    next('/login');
+  } else if (token && (to.path === '/' || to.path === '/login')) {
+    next('/tela-principal');
+  } else {
+    next();
+  }
+})
 
 export default router
