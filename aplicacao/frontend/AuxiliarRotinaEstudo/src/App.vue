@@ -1,14 +1,8 @@
 <template>
   <v-app>
-    <Toolbar />
-
-    <v-main>
-      <router-view></router-view>
-    </v-main>
-
+    <router-view></router-view>
   </v-app>
 </template>
 
 <script setup lang="ts">
-
 </script>

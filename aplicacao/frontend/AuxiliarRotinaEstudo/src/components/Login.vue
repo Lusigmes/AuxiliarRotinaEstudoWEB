@@ -9,17 +9,26 @@ const router = useRouter();
 const {login, error, loading, token} = useAuth();
 
 const mostrarModalRegistro = ref(false);
+const mostrarSenha = ref(false);
 
 const loginData = reactive<LoginUsuarioInterface>({
   email:'', senha:''
 });
+
+const rules = {
+  required: (value: string) => !!value || 'Campo obrigatório',
+  email: (value: string) => {
+    const regex_email = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return regex_email.test(value) || 'E-mail inválido';
+  }
+};
 
 async function fazerLogin(){
   const sucesso = await login(loginData);
   if(sucesso){
     router.push("/tela-principal");
   }else{
-    alert("Falha no login")
+    alert("Falha no login"); // tratar com notificação
   }
 }
 
@@ -35,178 +44,185 @@ watch(token, (newToken) => {
 </script>
 
 <template>
-  <div class="login-container">
-    <div class="login-card">
-      <div class="login-header">
-        <h1>📚 Sistema de Estudos</h1>
-        <p>Organize seus estudos e revisões</p>
-      </div>
+  <v-app>
+    <v-main>
+      <v-container fluid class="fill-height login-background">
+        <v-row justify="center" align="center">
+          <v-col cols="12" sm="8" md="6" lg="4" xl="3">
+            <v-card class="login-card" elevation="12" rounded="xl">
+              <v-card-item class="login-header">
+                <template #prepend>
+                  <v-avatar color="primary" size="56">
+                    <v-icon icon="mdi-book-education" size="32" />
+                  </v-avatar>
+                </template>
+                
+                <v-card-title class="text-h4 font-weight-bold text-primary">
+                  Sistema de Estudos
+                </v-card-title>
+                
+                <v-card-subtitle class="text-h6 text-medium-emphasis">
+                  Organize seus estudos e revisões
+                </v-card-subtitle>
+              </v-card-item>
 
-      <form @submit.prevent="fazerLogin" class="login-form">
-        <div class="form-group">
-          <label for="email">E-mail</label>
-          <input
-            id="email"
-            v-model="loginData.email"
-            type="email"
-            placeholder="seu@email.com"
-            required
-          />
-        </div>
+              <v-card-text>
+                <v-form @submit.prevent="fazerLogin" class="login-form">
+                  <v-text-field
+                    v-model="loginData.email"
+                    label="E-mail"
+                    type="email"
+                    placeholder="seu@email.com"
+                    :rules="[rules.required, rules.email]"
+                    prepend-inner-icon="mdi-email"
+                    variant="outlined"
+                    color="primary"
+                    required
+                    class="mb-4"
+                  />
 
-        <div class="form-group">
-          <label for="senha">Senha</label>
-          <input
-            id="senha"
-            v-model="loginData.senha"
-            type="password"
-            placeholder="Sua senha"
-            required
-          />
-        </div>
+                  <v-text-field
+                    v-model="loginData.senha"
+                    label="Senha"
+                    :type="mostrarSenha ? 'text' : 'password'"
+                    placeholder="Sua senha"
+                    :rules="[rules.required]"
+                    prepend-inner-icon="mdi-lock"
+                    variant="outlined"
+                    color="primary"
+                    required
+                    class="mb-2"
+                    :append-inner-icon="mostrarSenha ? 'mdi-eye-off' : 'mdi-eye'"
+                    @click:append-inner="mostrarSenha = !mostrarSenha"
+                  />
 
-        <button type="submit" class="login-btn" :disabled="loading">
-          {{ loading ? 'Entrando...' : 'Entrar' }}
-        </button>
+                  <v-btn
+                    type="submit"
+                    block
+                    size="x-large"
+                    color="primary"
+                    :loading="loading"
+                    :disabled="loading"
+                    class="login-btn mt-4"
+                  >
+                    <template v-if="loading">
+                      <v-progress-circular
+                        indeterminate
+                        size="20"
+                        width="2"
+                        class="mr-2"
+                      />
+                      Entrando...
+                    </template>
+                    <template v-else>
+                      <v-icon icon="mdi-login" class="mr-2" />
+                      Entrar
+                    </template>
+                  </v-btn>
 
-        <div v-if="error" class="error-message">
-          {{ error }}
-        </div>
-      </form>
+                  <v-alert
+                    v-if="error"
+                    type="error"
+                    variant="tonal"
+                    class="mt-4"
+                    closable
+                  >
+                    {{ error }}
+                  </v-alert>
+                </v-form>
+              </v-card-text>
 
-      <div class="register-section">
-        <p>Não tem uma conta?</p>
-        <button @click="mostrarModalRegistro = true" class="register-link">
-          Cadastre-se
-        </button>
-      </div>
-    </div>
+              <v-divider class="my-2" />
 
-    <Registro 
-      v-if="mostrarModalRegistro"
-      @close="mostrarModalRegistro = false"
-      @success="registroSucesso"
-    />
-  </div>
+              <v-card-actions class="register-section">
+                <v-container>
+                  <v-row align="center" justify="center">
+                    <v-col cols="auto">
+                      <span class="text-body-1 text-medium-emphasis mr-2">
+                        Não tem uma conta?
+                      </span>
+                    </v-col>
+                    <v-col cols="auto">
+                      <v-btn
+                        @click="mostrarModalRegistro = true"
+                        variant="text"
+                        color="primary"
+                        size="large"
+                      >
+                        <v-icon icon="mdi-account-plus" class="mr-2" />
+                        Cadastre-se
+                      </v-btn>
+                    </v-col>
+                  </v-row>
+                </v-container>
+              </v-card-actions>
+            </v-card>
+          </v-col>
+        </v-row>
+      </v-container>
+
+      <v-dialog
+        v-model="mostrarModalRegistro"
+        max-width="500"
+        persistent
+      >
+        <Registro 
+          @close="mostrarModalRegistro = false"
+          @success="registroSucesso"
+        />
+      </v-dialog>
+    </v-main>
+  </v-app>
 </template>
 
 <style scoped>
-.login-container {
-  min-height: 100vh;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+.login-background {
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  padding: 1rem;
+  min-height: 100vh;
 }
 
 .login-card {
-  background: white;
-  padding: 2rem;
-  border-radius: 12px;
-  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
-  width: 100%;
-  max-width: 400px;
+  backdrop-filter: blur(10px);
+  background: rgba(255, 255, 255, 0.95);
 }
 
 .login-header {
   text-align: center;
-  margin-bottom: 2rem;
+  padding: 2rem 1rem 1rem;
 }
 
-.login-header h1 {
-  color: #333;
-  margin-bottom: 0.5rem;
-  font-size: 1.8rem;
+:deep(.v-card-item__prepend) {
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  padding-bottom: 1rem;
 }
 
-.login-header p {
-  color: #666;
-  margin: 0;
+:deep(.v-card-title) {
+  width: 100;
+  text-align: center;
+  line-height: 1.2;
+}
+
+:deep(.v-card-subtitle) {
+  width: 100;
+  text-align: center;
 }
 
 .login-form {
-  margin-bottom: 1.5rem;
-}
-
-.form-group {
-  margin-bottom: 1rem;
-}
-
-.form-group label {
-  display: block;
-  margin-bottom: 0.5rem;
-  color: #333;
-  font-weight: 500;
-}
-
-.form-group input {
-  width: 100%;
-  padding: 0.75rem;
-  border: 2px solid #e1e5e9;
-  border-radius: 6px;
-  font-size: 1rem;
-  transition: border-color 0.3s;
-}
-
-.form-group input:focus {
-  outline: none;
-  border-color: #667eea;
-}
-
-.login-btn {
-  width: 100%;
-  padding: 0.75rem;
-  background: #667eea;
-  color: white;
-  border: none;
-  border-radius: 6px;
-  font-size: 1rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: background 0.3s;
-}
-
-.login-btn:hover:not(:disabled) {
-  background: #5a6fd8;
-}
-
-.login-btn:disabled {
-  background: #ccc;
-  cursor: not-allowed;
-}
-
-.error-message {
-  margin-top: 1rem;
-  padding: 0.75rem;
-  background: #fee;
-  border: 1px solid #fcc;
-  border-radius: 6px;
-  color: #c33;
-  text-align: center;
+  padding: 0 0.5rem;
 }
 
 .register-section {
-  text-align: center;
-  padding-top: 1rem;
-  border-top: 1px solid #e1e5e9;
+  padding: 1rem;
 }
 
-.register-section p {
-  color: #666;
-  margin-bottom: 0.5rem;
+/* Animação suave para o card */
+.login-card {
+  transition: all 0.3s ease;
 }
 
-.register-link {
-  background: none;
-  border: none;
-  color: #667eea;
-  text-decoration: underline;
-  cursor: pointer;
-  font-size: 1rem;
-}
-
-.register-link:hover {
-  color: #5a6fd8;
+.login-card:hover {
+  transform: translateY(-2px);
 }
 </style>

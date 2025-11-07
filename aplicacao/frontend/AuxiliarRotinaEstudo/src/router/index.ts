@@ -1,13 +1,9 @@
+import { useAuth } from '@/composables/useAuth';
 import { createRouter, createWebHistory } from 'vue-router';
 
 const routes = [
-    { 
-    path: "/",
-    name: "Home", 
-    redirect: '/login'
-  },
   { 
-    path: "/login",
+    path: "/",
     name: "Login", 
     component: () => import('@/components/Login.vue'),
     meta: { requiresAuth: false }
@@ -22,7 +18,19 @@ const routes = [
     path: "/tela-principal",
     name: "Tela Principal", 
     component: () => import('@/views/TelaPrincipal.vue'),
-    meta: { requiresAuth: true }
+    meta: { requiresAuth: true },
+    children: [
+      {
+        path: '',
+        name: 'Dashboard',
+        component: () => import('@/views/DashboardContent.vue'),
+     },
+      {
+        path: 'cronograma',
+        name: 'Cronograma',
+        component: () => import('@/views/cronograma/Cronograma.vue'),
+      },
+    ]
   }
 ]
 
@@ -31,16 +39,23 @@ const router = createRouter({
   routes,
 })
 
-router.beforeEach((to, from, next) => {
-  const token = localStorage.getItem("jwt");
-  
-  if (to.meta.requiresAuth && !token) {
-    next('/login');
-  } else if (token && (to.path === '/' || to.path === '/login')) {
-    next('/tela-principal');
-  } else {
-    next();
+router.beforeEach(async (to) => {
+  const { token, fetchUsuario, usuario } = useAuth();
+
+  if (token.value && !usuario.value) {
+    await fetchUsuario();
   }
+  if (to.meta.requiresAuth && !token.value) {
+    return "/";
+  }
+  if(token.value && to.path === '/') {
+    return "/tela-principal";
+  }
+  if(token.value && (to.path === '/' || to.path === '/registro')){
+    return "/tela-principal";
+  }
+
+  return true; 
 })
 
 export default router
