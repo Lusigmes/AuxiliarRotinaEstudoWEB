@@ -1,8 +1,13 @@
+import type { DiasSemana } from "./enums";
+
+export type Estado = 'semCronograma' | 'adicionandoItens' | 'visualizando';
+export type ModoAdicao = 'criar' | 'adicionar';
+
 export interface RegistroUsuarioInterface{
     nome: string;
     email: string;
     senha: string;
-    // tipoUsuario: "CLIENTE" | "PRESTADOR";
+    // tipoUsuario: "ALUNO" | "PROFESSOR";
     // roleUsuario:string;
 
 }
@@ -21,3 +26,27 @@ export interface LoginTokenResponseInterface{
     token:string;
     expiresIn: number
 }
+    
+export interface ItemCronogramaInterface{
+    diaSemana:DiasSemana;
+    nomeDisciplina: string;
+}
+
+export interface ItemCronogramaResponseInterface{
+    id: number;
+    diaSemana:DiasSemana;
+    nomeDisciplina: string;
+    // ordem?: number;
+}
+    
+export interface CronogramaInterface{ // usa para criar cronograma e adicionar itens
+    itensDoDia: ItemCronogramaInterface[];
+}
+
+
+export interface CronogramaResponseInterface{
+    id:number;
+    idUsuario: number;
+    itensDoDia: ItemCronogramaResponseInterface[];
+}
+

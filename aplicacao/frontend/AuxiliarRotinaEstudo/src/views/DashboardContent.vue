@@ -27,7 +27,26 @@
           </v-card-item>
         </v-card>
       </v-col>
-
+    
+      <v-col cols="12" sm="6" md="3">
+        <v-card 
+          class="dashboard-card" 
+          variant="flat" 
+          color="blue-lighten-5"
+          @click="navigateTo('cronograma')"
+        >
+          <v-card-item>
+            <template #prepend>
+              <v-avatar color="blue" variant="tonal" size="48">
+                <v-icon icon="mdi-calendar-week" />
+              </v-avatar>
+            </template>
+            
+            <v-card-title class="text-h6">Cronograma do dashboard content</v-card-title>
+            <v-card-subtitle>Planeje sua semana</v-card-subtitle>
+          </v-card-item>
+        </v-card>
+      </v-col>
       <!-- Outros cards... -->
     </v-row>
 
@@ -43,7 +62,11 @@
   </v-container>
 </template>
 
-<script setup lang="ts">
+<script setup lang="ts"> 
+// os itens que ficam na tela principal
+// os itens que o são pedidos no exercicio
+// cada item é um <v-col cols="12" sm="6" md="3"> dentro da row
+
 import { computed } from 'vue';
 import { useRouter } from 'vue-router';
 
@@ -57,6 +80,9 @@ function navigateTo(destino: string) {
   router.push(`/tela-principal/${destino}`);
 }
 </script>
+
+
+
 
 <style scoped>
 .dashboard-card {
