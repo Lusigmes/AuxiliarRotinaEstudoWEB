@@ -50,3 +50,17 @@ export interface CronogramaResponseInterface{
     itensDoDia: ItemCronogramaResponseInterface[];
 }
 
+export interface EstudoInterface{
+    nomeDisciplina: string;
+    tema: string;
+    tempoDeEstudo: number;
+    diaDoEstudo: string;
+}
+
+export interface EstudoResponseInterface{
+    id:number;
+    nomeDisciplina: string;
+    tema: string;
+    tempoDeEstudo: number;
+    diaDoEstudo: string;
+}

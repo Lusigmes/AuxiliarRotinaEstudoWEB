@@ -32,21 +32,25 @@
         <v-card 
           class="dashboard-card" 
           variant="flat" 
-          color="blue-lighten-5"
-          @click="navigateTo('cronograma')"
+          color="green-lighten-5"
+          @click="navigateTo('estudo')"
+
         >
           <v-card-item>
             <template #prepend>
-              <v-avatar color="blue" variant="tonal" size="48">
-                <v-icon icon="mdi-calendar-week" />
+              <v-avatar color="green" variant="tonal" size="48">
+                <v-icon icon="mdi-book-education" />
               </v-avatar>
             </template>
             
-            <v-card-title class="text-h6">Cronograma do dashboard content</v-card-title>
-            <v-card-subtitle>Planeje sua semana</v-card-subtitle>
+            <v-card-title class="text-h6">Estudos</v-card-title>
+            <v-card-subtitle>Registre seu estudo diário</v-card-subtitle>
           </v-card-item>
         </v-card>
       </v-col>
+
+
+      
       <!-- Outros cards... -->
     </v-row>
 

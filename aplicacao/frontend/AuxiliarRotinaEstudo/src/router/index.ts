@@ -35,6 +35,11 @@ const routes = [
         name: 'ItemCronogramaForm',
         component: () => import('@/views/cronograma/AdicionarItensForm.vue'),
       },
+      {
+        path: 'estudo',
+        name: 'Estudo',
+        component: () => import('@/views/estudos/Estudo.vue'),
+      },
     ]
   }
 ]

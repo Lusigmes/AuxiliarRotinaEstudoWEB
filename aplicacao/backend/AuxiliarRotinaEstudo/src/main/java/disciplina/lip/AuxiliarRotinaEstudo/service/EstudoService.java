@@ -47,11 +47,11 @@ public class EstudoService {
         }
         
         // boolean dataAlterada = !estudo.getDiaDoEstudo().equals(dto.diaDoEstudo());
-        boolean dataAlterada = !estudo.getDiaDoEstudo().equals(LocalDate.parse(dto.diaDoEstudo()));
+        boolean dataAlterada = !estudo.getDiaDoEstudo().equals(LocalDate.parse(dto.getDiaDoEstudo()));
         
         estudo.setNomeDisciplina(dto.nomeDisciplina());
         estudo.setTema(dto.tema());
-        estudo.setTempoDeEstudo(dto.tempoDeEstudo( ));
+        estudo.setTempoDeEstudo(dto.tempoDeEstudo());
         estudo.setDiaDoEstudo(dto.getDiaDoEstudo());
 
         Estudo estudoAtualizado = estudoRepository.save(estudo);

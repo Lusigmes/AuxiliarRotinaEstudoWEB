@@ -35,7 +35,7 @@ function toggleTheme() {
       </v-avatar>
       
       <v-app-bar-title class="text-h5 font-weight-bold">
-        Sistema de Estudos
+        CronoStudy - Sistema de Gerência de Estudos
       </v-app-bar-title>
     </template>
 

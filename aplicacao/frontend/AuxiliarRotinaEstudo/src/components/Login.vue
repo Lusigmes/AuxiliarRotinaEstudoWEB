@@ -58,7 +58,7 @@ watch(token, (newToken) => {
                 </template>
                 
                 <v-card-title class="text-h4 font-weight-bold text-primary">
-                  Sistema de Estudos
+                  CronoStudy 
                 </v-card-title>
                 
                 <v-card-subtitle class="text-h6 text-medium-emphasis">

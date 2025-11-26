@@ -18,5 +18,5 @@ public interface EstudoRepository extends JpaRepository<Estudo, Long> {
     
     @Query("SELECT e FROM Estudo e LEFT JOIN e.usuario WHERE e.id = :idEstudo")
     Estudo findEstudoById(@Param("idEstudo") Long idEstudo);
-
+    
 }
