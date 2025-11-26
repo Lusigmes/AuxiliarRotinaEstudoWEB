@@ -1,12 +1,12 @@
 package disciplina.lip.AuxiliarRotinaEstudo.service;
 
-import java.time.LocalDate;
 import java.util.List;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import disciplina.lip.AuxiliarRotinaEstudo.dto.EstudoDTO;
 import disciplina.lip.AuxiliarRotinaEstudo.dto.EstudoResponseDTO;
 import disciplina.lip.AuxiliarRotinaEstudo.dto.EstudoUpdateDTO;
@@ -47,8 +47,8 @@ public class EstudoService {
         }
         
         // boolean dataAlterada = !estudo.getDiaDoEstudo().equals(dto.diaDoEstudo());
-        boolean dataAlterada = !estudo.getDiaDoEstudo().equals(LocalDate.parse(dto.getDiaDoEstudo()));
-        
+        boolean dataAlterada = !estudo.getDiaDoEstudo().equals(dto.getDiaDoEstudo()); 
+               
         estudo.setNomeDisciplina(dto.nomeDisciplina());
         estudo.setTema(dto.tema());
         estudo.setTempoDeEstudo(dto.tempoDeEstudo());
@@ -68,6 +68,10 @@ public class EstudoService {
             .stream()
             .map(this::estudoToDTO)
             .toList();
+    }
+
+    public Page<EstudoResponseDTO> listarPaginado(Usuario usuario, Pageable pageable){
+        return estudoRepository.findEstudoByUsuarioPage(usuario, pageable).map(this::estudoToDTO);
     }
 
     public EstudoResponseDTO estudoToDTO(Estudo estudo){

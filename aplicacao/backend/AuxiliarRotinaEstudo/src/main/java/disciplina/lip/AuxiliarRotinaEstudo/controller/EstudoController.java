@@ -1,7 +1,8 @@
 package disciplina.lip.AuxiliarRotinaEstudo.controller;
 
 import java.util.List;
-
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -47,10 +48,17 @@ public class EstudoController {
     @GetMapping
     public ResponseEntity<List<EstudoResponseDTO>> listarEstudosDoUsuario(
         @AuthenticationPrincipal Usuario usuario) {
-            List<EstudoResponseDTO> estudo = estudoService.listarEstudosDoUsuario(usuario);
-            return ResponseEntity.ok(estudo);
-        }
+        List<EstudoResponseDTO> estudo = estudoService.listarEstudosDoUsuario(usuario);
+        return ResponseEntity.ok(estudo);
+    }
         
+    @CrossOrigin
+    @GetMapping("/page")
+    public ResponseEntity<Page<EstudoResponseDTO>> listarEstudosPaginado(
+        @AuthenticationPrincipal Usuario usuario, Pageable pageable) {
+        return ResponseEntity.ok(estudoService.listarPaginado(usuario, pageable));
+    }
+
     @CrossOrigin
     @PutMapping("/{idEstudo}")
     public ResponseEntity<EstudoResponseDTO> atualizar(
@@ -67,4 +75,6 @@ public class EstudoController {
         estudoRepository.deleteById(idEstudo);
         return ResponseEntity.status(HttpStatus.NO_CONTENT).build();
     }   
+
+
 }

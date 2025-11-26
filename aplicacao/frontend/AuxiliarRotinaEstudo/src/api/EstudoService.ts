@@ -26,3 +26,21 @@ export const listarEstudosUsuario = async (
     const response = await httpConnect.get('/estudos');
     return response.data;
 }
+
+export const listarEstudosUsuarioPaginado = async (
+    page: number = 0, 
+    size: number = 10
+): Promise<any> => {
+    try {
+        const { data } = await httpConnect.get("/estudos/page", {
+            params: {
+                page,
+                size,
+                sort: "id,desc"
+            }
+        });
+        return data;
+    } catch (error) {
+        throw error;
+    }
+}

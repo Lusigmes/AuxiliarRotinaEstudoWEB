@@ -24,6 +24,8 @@ const textoEditando = ref({
   diaDoEstudo: ''
 });
 
+// paginando
+
 const estudosMap = ref(new Map<number, EstudoResponseInterface>());
 
 function atualizarEstudoMap(){
@@ -47,6 +49,7 @@ async function carregarEstudos(){
   loading.value = true;
   try {
     estudos.value = await listarEstudosUsuario();
+
     estado.value = estudos.value.length === 0 ? 'semEstudos' : 'visualizando';
     atualizarEstudoMap();
   } catch (error) {
@@ -65,8 +68,9 @@ async function salvarEstudo(estudo: EstudoInterface){
     estudosMap.value.set(estudoNovo.id, estudoNovo);
     estado.value = 'visualizando';
     modalAddEstudo.value = false;
+    await carregarEstudos();
   } catch (error) {
-  console.error('Erro ao adicionar estudo:', error);
+    console.error('Erro ao adicionar estudo:', error);
     alert('Erro ao adicionar estudo. Tente novamente.');
   }finally{
     loading.value = false;
@@ -82,6 +86,7 @@ async function deletarEstudo(id: number){
     await del(id);
     estudos.value = estudos.value.filter(estudo => estudo.id !== id);
     estudosMap.value.delete(id); 
+    await carregarEstudos();
     if (estudos.value.length === 0) {
       estado.value = 'semEstudos';
     }
@@ -130,6 +135,7 @@ async function salvarEdicaoEstudo(idEstudo: number){
   loading.value = true;
   try {
     const targetEstudo = estudosMap.value.get(idEstudo);
+
     if(targetEstudo){
       targetEstudo.nomeDisciplina = textoEditando.value.nomeDisciplina.trim();
       targetEstudo.tema = textoEditando.value.tema.trim();
@@ -142,8 +148,8 @@ async function salvarEdicaoEstudo(idEstudo: number){
         tempoDeEstudo: textoEditando.value.tempoDeEstudo,
         diaDoEstudo: textoEditando.value.diaDoEstudo,
       });
-      
       cancelarEdicao();
+      await carregarEstudos();
     }
   } catch (error) {
     console.error('Erro ao editar estudo:', error);
@@ -217,7 +223,7 @@ onMounted( async () => {
       </v-card>
     </div>
 
-    <!-- VISUALIZANDO -->
+<!-- VISUALIZANDO -->
     <div v-else-if="estado === 'visualizando'">
       <v-card variant="flat" elevation="2">
         <v-card-title class="d-flex justify-space-between align-center">
@@ -253,6 +259,9 @@ onMounted( async () => {
                       hide-details
                       class="edit-field"
                       placeholder="Nome da disciplina"
+                      @keyup.enter="salvarEdicaoEstudo(estudo.id)"
+                      @keyup.esc="cancelarEdicao"
+                      autofocus
                     />
                   </div>
                   <span v-else class="font-weight-bold">
@@ -270,6 +279,8 @@ onMounted( async () => {
                       hide-details
                       class="edit-field"
                       placeholder="Tema do estudo"
+                      @keyup.enter="salvarEdicaoEstudo(estudo.id)"
+                      @keyup.esc="cancelarEdicao"
                     />
                   </div>
                   <span v-else>
@@ -290,6 +301,8 @@ onMounted( async () => {
                       style="max-width: 100px;"
                       min="1"
                       max="480"
+                      @keyup.enter="salvarEdicaoEstudo(estudo.id)"
+                      @keyup.esc="cancelarEdicao"
                     />
                   </div>
                   <v-chip v-else color="blue" variant="flat">
@@ -308,6 +321,8 @@ onMounted( async () => {
                       class="edit-field"
                       style="max-width: 150px;"
                       @update:valorData="textoEditando.diaDoEstudo = $event"
+                      @keyup.enter="salvarEdicaoEstudo(estudo.id)"
+                      @keyup.esc="cancelarEdicao"
                     />
                   </div>
                   <span v-else>
@@ -318,31 +333,55 @@ onMounted( async () => {
                 <!-- AÇÕES -->
                 <td>
                   <div class="d-flex align-center gap-1">
-                    <!-- BOTÃO PARA CONCLUIR/FINALIZAR EDIT-->
+                    <!-- BOTÃO PARA CONCLUIR/FINALIZAR EDIÇÃO -->
                     <template v-if="editandoEstudoId === estudo.id">
-                      <v-btn
-                        icon
-                        size="small"
-                        variant="text"
-                        color="green"
-                        @click="salvarEdicaoEstudo(estudo.id)"
-                        :loading="loading"
-                      >
-                        <v-icon>mdi-check</v-icon>
-                      </v-btn>
-                      <v-btn
-                        icon
-                        size="small"
-                        variant="text"
-                        color="grey"
-                        @click="cancelarEdicao"
-                        :disabled="loading"
-                      >
-                        <v-icon>mdi-close</v-icon>
-                      </v-btn>
+                      <div>
+                        <v-btn
+                          icon
+                          size="small"
+                          variant="text"
+                          color="green"
+                          @click="salvarEdicaoEstudo(estudo.id)"
+                          :loading="loading"
+                        >
+                          <v-icon>mdi-check</v-icon>
+                        </v-btn>
+                        <v-tooltip
+                          location="bottom"
+                          activator="parent"
+                          open-delay="500"
+                        >
+                          <span class="d-flex align-center">
+                            <v-icon small class="mr-1">mdi-keyboard-return</v-icon>
+                            Aperte Enter para salvar
+                          </span>
+                        </v-tooltip>
+                      </div>
+                      <div>
+                        <v-btn
+                          icon
+                          size="small"
+                          variant="text"
+                          color="grey"
+                          @click="cancelarEdicao"
+                          :disabled="loading"
+                        >
+                          <v-icon>mdi-close</v-icon>
+                        </v-btn>
+                        <v-tooltip
+                          location="bottom"
+                          activator="parent"
+                          open-delay="500"
+                        >
+                          <span class="d-flex align-center">
+                            <v-icon small class="mr-1">mdi-escape</v-icon>
+                            Aperte Esc para cancelar
+                          </span>
+                        </v-tooltip>
+                      </div>
                     </template>
 
-                    <!-- BOTÕES AÇAÃO BASE  -->
+                    <!-- BOTÕES AÇÃO BASE -->
                     <template v-else>
                       <v-btn
                         icon
@@ -373,8 +412,8 @@ onMounted( async () => {
           </v-table>
         </v-card-text>
       </v-card>
-    </div>
-
+    </div>  
+      
     <v-dialog v-model="modalAddEstudo" max-width="800px" persistent>
       <AdicionarEstudoForm
         :loading="loading"
@@ -429,5 +468,11 @@ span {
   min-height: 32px;
   padding: 0 8px;
   font-size: 0.875rem;
+}
+
+:deep(.v-tooltip__content) {
+  background: rgba(0, 0, 0, 0.8);
+  font-size: 0.75rem;
+  padding: 4px 8px;
 }
 </style>
