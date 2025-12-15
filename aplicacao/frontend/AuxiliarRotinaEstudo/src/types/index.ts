@@ -64,3 +64,23 @@ export interface EstudoResponseInterface{
     tempoDeEstudo: number;
     diaDoEstudo: string;
 }
+
+
+export interface RevisaoInterface{
+    dataRevisao: string;
+    concluida: boolean;
+    idEstudo: number;
+}
+
+export interface RevisaoResponseInterface{
+    id: number;
+    dataRevisao: string;
+    concluida: boolean;
+    idEstudo: number;
+}   
+
+
+    // public record RevisaoUpdateDTO(
+    // @JsonFormat(pattern = "dd/MM/yyyy")
+    // LocalDate dataRevisao
+

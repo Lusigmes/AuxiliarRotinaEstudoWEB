@@ -1,4 +1,4 @@
-import { ref, computed } from "vue";
+import { ref } from "vue";
 import { logarUsuario, registrarUsuario, getUsuarioAutenticado } from "@/api/UsuarioAuthService";
 import type {UsuarioResponseInterface, RegistroUsuarioInterface, LoginUsuarioInterface, LoginTokenResponseInterface } from "@/types";
 import axios from "axios";
@@ -68,10 +68,10 @@ export function useAuth() {
     }
 
     return { 
-        token: computed(() => token.value), 
-        usuario: computed(() => usuario.value), 
-        error: computed(() => error.value),
-        loading: computed(() => loading.value),
+        token, 
+        usuario, 
+        error,
+        loading,
         login, 
         registro, 
         logout, 

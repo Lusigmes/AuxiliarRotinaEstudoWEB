@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed } from 'vue';
+import { computed, watchEffect } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import { useAuth } from '@/composables/useAuth';
 import { useTheme } from 'vuetify';
@@ -7,6 +7,10 @@ import { useTheme } from 'vuetify';
 const router = useRouter();
 const { logout: authLogout, usuario } = useAuth();
 const theme = useTheme();
+
+const usuarioAutenticado = computed(() => {
+  return usuario.value !== null;
+});
 
 const usuarioNome = computed(() => usuario.value?.nome || 'Usuário');
 const usuarioEmail = computed(() => usuario.value?.email || '');
@@ -24,24 +28,25 @@ function logout() {
 function toggleTheme() {
   theme.global.name.value = theme.global.current.value.dark ? 'light' : 'dark';
 }
-
+watchEffect(() => {
+  if (!usuario.value) {
+    router.push('/');
+  }
+});
 </script>
 <template>
   <v-app-bar color="primary" elevation="4" rounded="0">
-    <!-- Logo e Título -->
+ 
     <template #prepend>
-      <v-avatar color="white" size="40" class="mr-2">
-        <v-icon icon="mdi-book-education" color="primary" />
-      </v-avatar>
-      
-      <v-app-bar-title class="text-h5 font-weight-bold">
+
+      <v-app-bar-title class="text-h5 font-weight-bold ml-8">
         CronoStudy - Sistema de Gerência de Estudos
       </v-app-bar-title>
     </template>
 
-    <!-- Ações do Usuário -->
+
     <template #append>
-      <!-- Toggle de Tema -->
+    
       <v-btn icon @click="toggleTheme" class="mr-2">
         <v-icon>mdi-theme-light-dark</v-icon>
       </v-btn>
@@ -59,7 +64,6 @@ function toggleTheme() {
         </template>
         
         <v-list>
-          <!-- Header do Usuário -->
           <v-list-item>
             <template #prepend>
               <v-avatar color="secondary" size="36">
@@ -77,25 +81,7 @@ function toggleTheme() {
           </v-list-item>
           
           <v-divider class="my-2" />
-          
-          <!-- REMOVA ESTAS OPÇÕES ATÉ CRIAR AS ROTAS -->
-          <!-- <v-list-item @click="navigateTo('perfil')">
-            <template #prepend>
-              <v-icon icon="mdi-account-cog" />
-            </template>
-            <v-list-item-title>Meu Perfil</v-list-item-title>
-          </v-list-item>
-          
-          <v-list-item @click="navigateTo('configuracoes')">
-            <template #prepend>
-              <v-icon icon="mdi-cog" />
-            </template>
-            <v-list-item-title>Configurações</v-list-item-title>
-          </v-list-item>
-          
-          <v-divider class="my-2" /> -->
-          
-          <!-- Logout -->
+
           <v-list-item @click="logout" color="error">
             <template #prepend>
               <v-icon icon="mdi-logout" />

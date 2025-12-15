@@ -3,6 +3,8 @@ package disciplina.lip.AuxiliarRotinaEstudo.repository;
 import java.time.LocalDate;
 import java.util.List;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -18,8 +20,14 @@ public interface RevisaoRepository extends JpaRepository<Revisao, Long> {
     @Query("SELECT r FROM Revisao r JOIN FETCH r.estudo e WHERE e.usuario = :usuario AND r.dataRevisao <= :hoje AND r.concluida = false")
     List<Revisao> findRevisoesPendentesByUsuario(@Param("usuario") Usuario usuario, @Param("hoje") LocalDate hoje);
     
+    @Query("SELECT r FROM Revisao r JOIN FETCH r.estudo e WHERE e.usuario = :usuario AND r.dataRevisao <= :hoje AND r.concluida = false ORDER BY r.dataRevisao DESC")
+    Page<Revisao> findRevisoesPendentesByUsuarioPage(@Param("usuario") Usuario usuario, @Param("hoje") LocalDate hoje, Pageable pageable);
+    
     @Query("SELECT r FROM Revisao r JOIN FETCH r.estudo e WHERE e.usuario = :usuario AND r.dataRevisao < :hoje AND r.concluida = false")
     List<Revisao> findRevisoesAtrasadasByUsuario(@Param("usuario") Usuario usuario, @Param("hoje") LocalDate hoje);
+    
+    @Query("SELECT r FROM Revisao r JOIN FETCH r.estudo e WHERE e.usuario = :usuario AND r.dataRevisao < :hoje AND r.concluida = false  ORDER BY r.dataRevisao DESC")
+    Page<Revisao> findRevisoesAtrasadasByUsuarioPage(@Param("usuario") Usuario usuario, @Param("hoje") LocalDate hoje, Pageable pageable);
     
     @Query("SELECT r FROM Revisao r JOIN FETCH r.estudo e WHERE e.id = :idEstudo")
     List<Revisao> findByEstudoId(@Param("idEstudo") Long idEstudo);
@@ -35,5 +43,10 @@ public interface RevisaoRepository extends JpaRepository<Revisao, Long> {
     
     @Query("SELECT r FROM Revisao r WHERE r.id = :idRevisao")
     Revisao findRevisaoById(@Param("idRevisao") Long idRevisao);
-    
+
+    @Query("SELECT COUNT(r) FROM Revisao r JOIN r.estudo e WHERE e.usuario = :usuario AND r.dataRevisao <= :hoje AND r.concluida = false")
+    long countRevisoesPendentesByUsuario(@Param("usuario") Usuario usuario, @Param("hoje") LocalDate hoje);
+
+    @Query("SELECT COUNT(r) FROM Revisao r JOIN r.estudo e WHERE e.usuario = :usuario AND r.dataRevisao < :hoje AND r.concluida = false")
+    long countRevisoesAtrasadasByUsuario(@Param("usuario") Usuario usuario, @Param("hoje") LocalDate hoje);
 }

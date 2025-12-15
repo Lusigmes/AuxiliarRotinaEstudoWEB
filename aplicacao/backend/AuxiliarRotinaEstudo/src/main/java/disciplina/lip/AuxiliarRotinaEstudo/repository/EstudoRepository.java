@@ -1,6 +1,7 @@
 package disciplina.lip.AuxiliarRotinaEstudo.repository;
 
 import java.util.List;
+
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -19,6 +20,10 @@ public interface EstudoRepository extends JpaRepository<Estudo, Long> {
     
     @Query("SELECT e FROM Estudo e LEFT JOIN e.usuario WHERE e.id = :idEstudo")
     Estudo findEstudoById(@Param("idEstudo") Long idEstudo);
+    
+    
+    @Query("SELECT e.nomeDisciplina FROM Estudo e WHERE e.id = :idEstudo")
+    String findEstudoNomeDisciplinaById(@Param("idEstudo") Long idEstudo);
     
     
     @Query("SELECT e FROM Estudo e WHERE e.usuario = :usuario ORDER BY e.id DESC")

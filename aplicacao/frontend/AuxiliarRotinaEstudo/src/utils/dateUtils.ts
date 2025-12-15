@@ -58,3 +58,4 @@ export const verificarDataHoje = (dataString: string): boolean => {
   const hoje = new Date();
   return formatarDataParaPTBR(data) === formatarDataParaPTBR(hoje);
 };
+

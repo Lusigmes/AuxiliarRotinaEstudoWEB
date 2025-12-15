@@ -1,6 +1,5 @@
 <template>
   <v-container fluid class="pa-6">
-    <!-- breadcrumb -->
     <v-breadcrumbs :items="breadcrumbs" class="px-0 mb-4">
       <template v-slot:divider>
         <v-icon>mdi-chevron-right</v-icon>
@@ -49,9 +48,25 @@
         </v-card>
       </v-col>
 
+      <v-col cols="12" sm="6" md="3">
+        <v-card 
+          class="dashboard-card"
+          variant="flat"
+          color="orange-lighten-5" 
+          @click="navigateTo('revisao')">
+          <v-card-item>
+            <template #prepend>
+              <v-avatar color="orange" variant="tonal" size="48">
+                <v-icon icon="mdi-calendar-check" />
+              </v-avatar>
+            </template>
+            <v-card-title class="text-h6">Revisões</v-card-title>
+            <v-card-subtitle>Gerencie suas revisões</v-card-subtitle>
+          </v-card-item>
+        </v-card>
+      </v-col>
 
       
-      <!-- Outros cards... -->
     </v-row>
 
 
@@ -67,9 +82,6 @@
 </template>
 
 <script setup lang="ts"> 
-// os itens que ficam na tela principal
-// os itens que o são pedidos no exercicio
-// cada item é um <v-col cols="12" sm="6" md="3"> dentro da row
 
 import { computed } from 'vue';
 import { useRouter } from 'vue-router';

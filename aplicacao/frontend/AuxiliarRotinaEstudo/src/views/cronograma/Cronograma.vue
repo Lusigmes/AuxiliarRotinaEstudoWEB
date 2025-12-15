@@ -306,12 +306,10 @@ onMounted(async () => {
 
 <template>
   <v-container fluid class="pa-6">
-    <!-- Breadcrumb -->
     <v-breadcrumbs :items="breadcrumbs" class="px-0 mb-4">
       <template #divider><v-icon>mdi-chevron-right</v-icon></template>
     </v-breadcrumbs>
 
-    <!-- Header -->
     <v-card variant="flat" class="mb-6">
       <v-card-item>
         <template #prepend>

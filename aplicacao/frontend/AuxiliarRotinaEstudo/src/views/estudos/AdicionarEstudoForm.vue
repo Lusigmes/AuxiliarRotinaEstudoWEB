@@ -170,7 +170,8 @@ const salvarEstudo = async () => {
             @click="$emit('cancelar')"
             :disabled="props.loading"
           >
-            Cancelar
+          <v-icon icon="mdi-close" class="mr-2" /> Cancelar
+
           </v-btn>
           <v-btn
             color="primary"

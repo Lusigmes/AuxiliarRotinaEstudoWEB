@@ -1,9 +1,10 @@
 <script setup lang="ts">
 import { computed, ref, onMounted } from 'vue';
-import { criarEstudo, atualizarEstudo, deletarEstudo as del, listarEstudosUsuario } from '@/api/EstudoService';
+import { criarEstudo, atualizarEstudo, deletarEstudo as del, listarEstudosUsuarioPaginado } from '@/api/EstudoService';
 import type { EstudoInterface, EstudoResponseInterface } from '@/types';
 import { converterStringParaData } from '@/utils/dateUtils';
 import AdicionarEstudoForm from './AdicionarEstudoForm.vue';
+import { usePagination } from '@/composables/usePagination';
 
 const breadcrumbs = computed(() => [
   { title: 'Dashboard', disabled: false, to: '/tela-principal' },
@@ -11,8 +12,8 @@ const breadcrumbs = computed(() => [
 ]);
 
 const estado = ref<'semEstudos' |'visualizando'>('visualizando');
-const loading = ref(false);
-const estudos = ref<EstudoResponseInterface[]>([]);
+// const loading = ref(false);
+// const estudos = ref<EstudoResponseInterface[]>([]);
 const removerEstudo = ref<number | null>(null);
 const modalAddEstudo = ref(false);
 
@@ -25,7 +26,25 @@ const textoEditando = ref({
 });
 
 // paginando
+const {
+  items: estudos,
+  page,
+  totalPages,
+  loading,
+  atualizarPagina
+} = usePagination<EstudoResponseInterface>(listarEstudosUsuarioPaginado, 6);
 
+const mudarPagina = async (novaPagina: number) => {
+  await atualizarPagina(novaPagina - 1); 
+};
+
+async function carregarEstudos(pagina: number = page.value) {
+  await atualizarPagina(pagina);
+  estado.value = estudos.value.length === 0 ? 'semEstudos' : 'visualizando';
+  atualizarEstudoMap();
+
+}
+//
 const estudosMap = ref(new Map<number, EstudoResponseInterface>());
 
 function atualizarEstudoMap(){
@@ -45,30 +64,33 @@ const estudosOrdenados = computed(() => {
   });
 });
 
-async function carregarEstudos(){
-  loading.value = true;
-  try {
-    estudos.value = await listarEstudosUsuario();
+// async function carregarEstudos(){
+//   loading.value = true;
+//   try {
+//     estudos.value = await listarEstudosUsuario();
 
-    estado.value = estudos.value.length === 0 ? 'semEstudos' : 'visualizando';
-    atualizarEstudoMap();
-  } catch (error) {
-    console.error('Erro ao carregar estudos:', error);
-    alert('Erro ao carregar estudos. Tente novamente.');
-  }finally{
-    loading.value = false;
-  }
-};
+//     estado.value = estudos.value.length === 0 ? 'semEstudos' : 'visualizando';
+//     atualizarEstudoMap();
+//   } catch (error) {
+//     console.error('Erro ao carregar estudos:', error);
+//     alert('Erro ao carregar estudos. Tente novamente.');
+//   }finally{
+//     loading.value = false;
+//   }
+// };
 
 async function salvarEstudo(estudo: EstudoInterface){
   loading.value = true;
   try {
     const estudoNovo = await criarEstudo(estudo);
+
     estudos.value.push(estudoNovo);
     estudosMap.value.set(estudoNovo.id, estudoNovo);
+
     estado.value = 'visualizando';
     modalAddEstudo.value = false;
-    await carregarEstudos();
+
+    await carregarEstudos(0);
   } catch (error) {
     console.error('Erro ao adicionar estudo:', error);
     alert('Erro ao adicionar estudo. Tente novamente.');
@@ -77,26 +99,35 @@ async function salvarEstudo(estudo: EstudoInterface){
   }
 };
 
+
 async function deletarEstudo(id: number){
   if (!confirm('Tem certeza que deseja excluir este estudo?')) {
     return;
   }
+  
   removerEstudo.value = id;
+  
+  const estudosBackup = [...estudos.value];
+  
   try {
-    await del(id);
     estudos.value = estudos.value.filter(estudo => estudo.id !== id);
-    estudosMap.value.delete(id); 
+    estudosMap.value.delete(id);
+    
+    await del(id);
+    
     await carregarEstudos();
-    if (estudos.value.length === 0) {
-      estado.value = 'semEstudos';
-    }
+    
   } catch (error) {
     console.error('Erro ao deletar estudo:', error);
+    
+    estudos.value = estudosBackup;
+    estado.value = estudosBackup.length === 0 ? 'semEstudos' : 'visualizando';
+    
     alert('Erro ao deletar estudo. Tente novamente.');
   } finally {
     removerEstudo.value = null;
   }
-};
+}
 
 function iniciarAdicaoEstudo(){
   modalAddEstudo.value = true;
@@ -161,18 +192,16 @@ async function salvarEdicaoEstudo(idEstudo: number){
 };
 
 onMounted( async () => {
-  carregarEstudos();
+  carregarEstudos(0);
 });
 </script>
 
 <template>
   <v-container fluid class="pa-6">
-    <!-- Breadcrumb -->
     <v-breadcrumbs :items="breadcrumbs" class="px-0 mb-4">
       <template #divider><v-icon>mdi-chevron-right</v-icon></template>
     </v-breadcrumbs>
 
-    <!-- Header -->
     <v-card variant="flat" class="mb-6">
       <v-card-item>
         <template #prepend>
@@ -223,16 +252,16 @@ onMounted( async () => {
       </v-card>
     </div>
 
-<!-- VISUALIZANDO -->
+    <!-- VISUALIZANDO -->
     <div v-else-if="estado === 'visualizando'">
       <v-card variant="flat" elevation="2">
         <v-card-title class="d-flex justify-space-between align-center">
-          <span>Meus Estudos</span>
-          <div class="d-flex align-center gap-2">
+          <!-- <span>Meus Estudos</span> -->
+          <!-- <div class="d-flex align-center gap-2">
             <v-chip color="primary" variant="flat">
-              Total: {{ estudos.length }} estudo(s)
+              Estudo(s): {{ estudos.length }}
             </v-chip>
-          </div>
+          </div> -->
         </v-card-title>
 
         <v-card-text>
@@ -362,7 +391,7 @@ onMounted( async () => {
                           icon
                           size="small"
                           variant="text"
-                          color="grey"
+                          color="error"
                           @click="cancelarEdicao"
                           :disabled="loading"
                         >
@@ -412,8 +441,25 @@ onMounted( async () => {
           </v-table>
         </v-card-text>
       </v-card>
-    </div>  
-      
+
+      <v-row 
+        justify="center" 
+        class="mt-4" 
+        v-if="totalPages > 1 && Number.isInteger(totalPages)"
+      >
+        <v-pagination
+          :length="totalPages"
+          :model-value="page + 1"
+          @update:model-value="mudarPagina"
+          color="primary"
+          size="small"
+          rounded
+          :show-first-last-page="true"   
+          :total-visible="0"   
+        />
+      </v-row>
+    </div>
+
     <v-dialog v-model="modalAddEstudo" max-width="800px" persistent>
       <AdicionarEstudoForm
         :loading="loading"

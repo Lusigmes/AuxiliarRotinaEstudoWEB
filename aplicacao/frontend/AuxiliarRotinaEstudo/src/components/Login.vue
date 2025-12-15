@@ -52,9 +52,6 @@ watch(token, (newToken) => {
             <v-card class="login-card" elevation="12" rounded="xl">
               <v-card-item class="login-header">
                 <template #prepend>
-                  <v-avatar color="primary" size="56">
-                    <v-icon icon="mdi-book-education" size="32" />
-                  </v-avatar>
                 </template>
                 
                 <v-card-title class="text-h4 font-weight-bold text-primary">

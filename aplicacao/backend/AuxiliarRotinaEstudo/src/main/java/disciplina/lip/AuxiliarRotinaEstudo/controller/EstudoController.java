@@ -76,5 +76,11 @@ public class EstudoController {
         return ResponseEntity.status(HttpStatus.NO_CONTENT).build();
     }   
 
+    @CrossOrigin
+    @GetMapping("/{idEstudo}/disciplina")
+    public ResponseEntity<String> buscarNomeDisciplinaPorId(@PathVariable Long idEstudo){
+        String nomeDisciplina = estudoService.buscarNomeDisciplinaPorId(idEstudo);
+        return ResponseEntity.ok(nomeDisciplina);
+    }
 
 }

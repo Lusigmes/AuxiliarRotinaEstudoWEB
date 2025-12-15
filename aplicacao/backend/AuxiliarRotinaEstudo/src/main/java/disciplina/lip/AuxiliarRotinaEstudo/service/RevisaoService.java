@@ -6,7 +6,8 @@ import java.util.List;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import disciplina.lip.AuxiliarRotinaEstudo.dto.RevisaoResponseDTO;
 import disciplina.lip.AuxiliarRotinaEstudo.dto.RevisaoUpdateDTO;
 import disciplina.lip.AuxiliarRotinaEstudo.model.entity.Estudo;
@@ -69,17 +70,18 @@ public class RevisaoService {
             throw new IllegalArgumentException("Revisão não encontrada com ID: " + idRevisao);
         }
 
-        // LocalDate novaData = data.getDataRevisao();
-    
-        if(data.dataRevisao().isBefore(LocalDate.now())){
-            throw new IllegalArgumentException("Data da revisão não pode ser no passado");
+        LocalDate novaData = data.getDataRevisao();
+ 
+        
+        if (revisao.getEstudo() != null) {
+            LocalDate diaEstudo = revisao.getEstudo().getDiaDoEstudo();
+            if (novaData.isBefore(diaEstudo)) {
+                throw new IllegalArgumentException("Data da revisão não pode ser antes do estudo responsável");
+            }
         }
         
-        if(data.dataRevisao().isBefore(revisao.getDataRevisao())){
-            throw new IllegalArgumentException("Data da revisão não pode ser antes do estudo responsável"); 
-        }
+        revisao.setDataRevisao(novaData);
         
-        revisao.setDataRevisao(data.dataRevisao());
         return revisaoRepository.save(revisao);
 
     }
@@ -89,6 +91,12 @@ public class RevisaoService {
     public List<Revisao> listarRevisoesPendentes(Usuario usuario){
         return revisaoRepository.findRevisoesPendentesByUsuario(usuario, LocalDate.now());
     }
+
+    public Page<RevisaoResponseDTO> listarRevisoesPendentesPaginado(Usuario usuario,Pageable pageable) {
+        return revisaoRepository.findRevisoesPendentesByUsuarioPage(usuario, LocalDate.now(), pageable)
+            .map(this::revisaoToDTO);
+    }
+
     public List<Revisao> listarRevisoes(Usuario usuario){
         return revisaoRepository.findRevisoesByUsuario(usuario);
     }
@@ -96,11 +104,22 @@ public class RevisaoService {
     public List<Revisao> listarRevisoesAtrasadas(Usuario usuario){
         return revisaoRepository.findRevisoesAtrasadasByUsuario(usuario, LocalDate.now());
     }
-
+    
+    public Page<RevisaoResponseDTO> listarRevisoesAtrasadasPaginado(Usuario usuario,Pageable pageable) {
+        return revisaoRepository.findRevisoesAtrasadasByUsuarioPage(usuario, LocalDate.now(), pageable)
+            .map(this::revisaoToDTO);
+    }
+    
     public RevisaoResponseDTO revisaoToDTO(Revisao revisao){
         return new RevisaoResponseDTO(
             revisao.getId(), revisao.getDataRevisao(), revisao.getConcluida(), revisao.getEstudoId());
     }
 
-    // alterar data das revisoes
+    public long contarRevisoesPendentes(Usuario usuario) {
+        return revisaoRepository.countRevisoesPendentesByUsuario(usuario, LocalDate.now());
+    }
+
+    public long contarRevisoesAtrasadas(Usuario usuario) {
+        return revisaoRepository.countRevisoesAtrasadasByUsuario(usuario, LocalDate.now());
+    }
 }

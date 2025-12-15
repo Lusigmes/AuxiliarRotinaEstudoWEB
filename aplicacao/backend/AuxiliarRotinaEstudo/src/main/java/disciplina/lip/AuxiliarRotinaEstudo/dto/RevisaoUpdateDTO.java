@@ -1,11 +1,18 @@
 package disciplina.lip.AuxiliarRotinaEstudo.dto;
 
 import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
 
-import com.fasterxml.jackson.annotation.JsonFormat;
 
 public record RevisaoUpdateDTO(
-    @JsonFormat(pattern = "dd/MM/yyyy")
-    LocalDate dataRevisao
+    String dataRevisao
 ) {
+    public LocalDate getDataRevisao() {
+        try {
+            DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd/MM/yyyy");
+            return LocalDate.parse(this.dataRevisao, formatter);
+        } catch (Exception e) {
+            return LocalDate.now(); 
+        }
+    } 
 }

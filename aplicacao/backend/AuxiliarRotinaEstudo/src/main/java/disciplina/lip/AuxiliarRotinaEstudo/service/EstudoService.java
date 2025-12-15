@@ -38,6 +38,10 @@ public class EstudoService {
         return estudoSalvo;
     }
 
+    public String buscarNomeDisciplinaPorId(Long idEstudo){
+        return estudoRepository.findEstudoNomeDisciplinaById(idEstudo);
+    }
+
     @Transactional
     public Estudo atualizar(EstudoUpdateDTO dto, Long idEstudo){
         Estudo estudo = estudoRepository.findEstudoById(idEstudo);

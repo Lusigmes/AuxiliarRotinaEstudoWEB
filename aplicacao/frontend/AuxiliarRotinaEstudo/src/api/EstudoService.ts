@@ -39,8 +39,16 @@ export const listarEstudosUsuarioPaginado = async (
                 sort: "id,desc"
             }
         });
+        
         return data;
     } catch (error) {
+        console.error('Erro na API paginada:', error);
         throw error;
     }
+}
+
+
+export const nomeDisciplinaDoEstudo = async (idEstudo: number): Promise<string> => {
+    const response = await httpConnect.get(`/estudos/${idEstudo}/disciplina`);
+    return response.data;
 }
