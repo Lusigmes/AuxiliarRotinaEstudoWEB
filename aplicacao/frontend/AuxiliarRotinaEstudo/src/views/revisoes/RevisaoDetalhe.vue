@@ -1,25 +1,30 @@
 <script setup lang="ts">
 import { nomeDisciplinaDoEstudo } from '@/api/EstudoService';
-import { concluirRevisao, reagendarDataRevisao } from '@/api/RevisaoService';
+import { useRevisaoStore } from '@/stores/revisaoStore';
 import type { RevisaoResponseInterface } from '@/types';
 import { converterStringParaData, validarFormatoData } from '@/utils/dateUtils';
-import { ref, watch } from 'vue';
+import { computed, ref, watch } from 'vue';
 
 const props = defineProps<{
   revisao: RevisaoResponseInterface | null;
+  origemLista?: boolean;  
 }>();
 
 const emit = defineEmits<{
-  (e: 'atualizar', payload: Partial<RevisaoResponseInterface>): void;
+  (e: 'atualizar', payload: RevisaoResponseInterface): void;
   (e: 'fechar'): void;
-  (e: 'concluir'): void;
-
 }>();
 
+const revisaoStore = useRevisaoStore();
 const modoReagendar = ref(false);
 const novaData = ref('');
 const loading = ref(false);
 const nomeDisciplina = ref<string>('');
+
+
+const mostrarBotoesAcoes = computed(() => {
+  return !props.origemLista && !props.revisao?.concluida;
+});
 
 watch(() => props.revisao, async (newVal) => {
   if (newVal?.idEstudo) {
@@ -44,9 +49,8 @@ async function concluir() {
   if(!props.revisao) return;
   loading.value = true;
   try{
-    const revisaoConcluida = await concluirRevisao(props.revisao.id);
+    const revisaoConcluida = await revisaoStore.concluirRevisao(props.revisao.id);
     emit('atualizar', revisaoConcluida);
-    emit('concluir');
     emit('fechar');
   }catch (error) {
     console.error('Erro ao concluir revisão:', error);
@@ -66,11 +70,13 @@ async function reagendar(){
   
   loading.value = true;
   try{
-    const revisaoReagendada = await reagendarDataRevisao(props.revisao.id, novaData.value);
+    const revisaoReagendada = await revisaoStore.reagendarDataRevisao(
+      props.revisao.id, 
+      novaData.value
+    );
     
     emit('atualizar', revisaoReagendada);
     
-    // ver se precisa mostrar mensagem
     const novaDataObj = converterStringParaData(novaData.value);
     const hoje = new Date();
     hoje.setHours(0, 0, 0, 0);
@@ -91,8 +97,6 @@ async function reagendar(){
     loading.value = false;
   }
 }
-
-
 </script>
 
 <template>
@@ -122,7 +126,7 @@ async function reagendar(){
             <v-list-item-title>Status</v-list-item-title>
             <v-list-item-subtitle>
               <v-chip :color="revisao.concluida ? 'success' : 'warning'" size="small">
-                {{ revisao.concluida ? 'Concluída' : 'Pendente' }}
+                {{ revisao.concluida ? 'Concluída' : 'Aguardando conclusão' }}
               </v-chip>
             </v-list-item-subtitle>
           </v-list-item>
@@ -136,7 +140,7 @@ async function reagendar(){
           </v-list-item>
         </v-list>
 
-        <div v-if="modoReagendar" class="mt-4">
+        <div v-if="modoReagendar && !origemLista" class="mt-4">
           <v-text-field
             v-model="novaData"
             label="Nova Data"
@@ -147,9 +151,9 @@ async function reagendar(){
             :rules="[v => !!v || 'Data é obrigatória']"
           />
           <div class="d-flex gap-2 mt-4 justify-end">
-            <v-btn  variant="outlined" color="grey" @click="modoReagendar = false">         
-               <v-icon icon="mdi-close" class="mr-2" /> 
-               Cancelar
+            <v-btn variant="outlined" color="grey" @click="modoReagendar = false">         
+              <v-icon icon="mdi-close" class="mr-2" /> 
+              Cancelar
             </v-btn>
             <v-btn color="primary" @click="reagendar" :loading="loading">
               <v-icon icon="mdi-check" class="mr-2" />
@@ -159,7 +163,7 @@ async function reagendar(){
         </div>
       </v-card-text>
 
-      <v-card-actions v-if="!revisao.concluida && !modoReagendar">
+      <v-card-actions v-if="mostrarBotoesAcoes">
         <v-spacer />
         <v-btn color="warning" @click="abrirReagendar">
           Reagendar
@@ -167,6 +171,13 @@ async function reagendar(){
         <v-btn color="success" @click="concluir" :loading="loading">
           <v-icon icon="mdi-check" class="mr-2" />
           Concluir
+        </v-btn>
+      </v-card-actions>
+      
+      <v-card-actions v-else-if="origemLista">
+        <v-spacer />
+        <v-btn color="primary" @click="$emit('fechar')">
+          Fechar
         </v-btn>
       </v-card-actions>
     </v-card>
@@ -177,4 +188,4 @@ async function reagendar(){
 .gap-2 {
   gap: 8px;
 }
-</style>  
+</style>

@@ -59,3 +59,25 @@ export const contarRevisoesAtrasadas = async (): Promise<number> => {
         return 0;
     }
 }
+
+export const listarRevisoesConcluidas = async (): Promise<RevisaoResponseInterface[]> => {
+    const response = await httpConnect.get('revisoes/concluidas');
+    return response.data;
+}
+
+export const carregarRevisoesConcluidasPaginado = async (page: number = 0, size: number = 6): Promise<any> => {
+    const response = await httpConnect.get('revisoes/concluidas/page', {
+        params: { page, size, sort: 'dataRevisao,DESC' }
+    });
+    return response.data;
+}
+
+export const contarRevisoesConcluidas = async (): Promise<number> => {
+    try {
+        const response = await httpConnect.get('revisoes/concluidas/contar');
+        return response.data;
+    } catch (error) {
+        console.error('Erro ao contar revisões concluídas:', error);
+        return 0;
+    }
+}

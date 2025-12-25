@@ -8,13 +8,17 @@ import 'vuetify/styles';
 import '@mdi/font/css/materialdesignicons.css';
 import VueTheMask from 'vue-the-mask';
 import App from './App.vue';
+import { createPinia } from 'pinia';
 
+
+const pinia = createPinia();
 const vuetify = createVuetify({
   components,
   directives,
-})
+});
 
 createApp(App)
+  .use(pinia)
   .use(vuetify)
   .use(router)
   .use(VueTheMask)

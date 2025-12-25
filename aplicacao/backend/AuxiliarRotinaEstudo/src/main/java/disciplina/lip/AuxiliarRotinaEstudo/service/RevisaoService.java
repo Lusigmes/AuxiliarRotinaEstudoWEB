@@ -86,7 +86,18 @@ public class RevisaoService {
 
     }
 
-    // buscar revisoes por id do estudo
+    public List<Revisao> listarRevisoesConcluidas(Usuario usuario) {
+        return revisaoRepository.findRevisoesConcluidasByUsuario(usuario);
+    }
+
+    public Page<RevisaoResponseDTO> listarRevisoesConcluidasPaginado(Usuario usuario, Pageable pageable) {
+        return revisaoRepository.findRevisoesConcluidasByUsuarioPage(usuario, pageable)
+            .map(this::revisaoToDTO);
+    }
+
+    public long contarRevisoesConcluidas(Usuario usuario) {
+        return revisaoRepository.countRevisoesConcluidasByUsuario(usuario);
+    }
 
     public List<Revisao> listarRevisoesPendentes(Usuario usuario){
         return revisaoRepository.findRevisoesPendentesByUsuario(usuario, LocalDate.now());

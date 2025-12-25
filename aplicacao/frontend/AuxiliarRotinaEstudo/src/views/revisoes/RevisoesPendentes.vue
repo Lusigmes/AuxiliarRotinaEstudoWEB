@@ -1,76 +1,61 @@
 <script setup lang="ts">
 import { nomeDisciplinaDoEstudo } from '@/api/EstudoService';
-import { carregarRevisoesPendentesPaginado, concluirRevisao, reagendarDataRevisao } from '@/api/RevisaoService';
-import { usePagination } from '@/composables/usePagination';
+import { carregarRevisoesPendentesPaginado } from '@/api/RevisaoService';
+import { useRevisaoPaginada } from '@/composables/useRevisaoPaginada';
 import type { RevisaoResponseInterface } from '@/types';
-import { converterStringParaData, formatarDataParaPTBR, validarFormatoData } from '@/utils/dateUtils';
-import { watch } from 'vue';
+import { converterStringParaData, validarFormatoData } from '@/utils/dateUtils';
 import { onMounted } from 'vue';
-import { computed, ref } from 'vue';
+import { ref, watch } from 'vue';
+
+const props = defineProps<{
+  key?: number
+}>();
 
 const {
-  items:revisoes,
+  items: revisoesDaPagina,
   page,
   totalPages,
   atualizarPagina,
-} = usePagination<RevisaoResponseInterface>(carregarRevisoesPendentesPaginado, 6);
-
+  revisaoStore,
+  recarregarPaginaAtual
+} = useRevisaoPaginada(carregarRevisoesPendentesPaginado, 'pendentes', 6);
 
 const emit = defineEmits<{
   (e: 'atualizar', payload: RevisaoResponseInterface): void;
-  (e: 'fechar'): void;
+  (e: 'ver-detalhes', payload: RevisaoResponseInterface): void;
 }>();
-
-const mudarPagina= async (novaPag: number) => {
-  await atualizarPagina(novaPag - 1);
-};
-
-async function carregarRevisoes(pagina: number = page.value){
-  await atualizarPagina(pagina);
-};
-
-const revisoesPendentes = computed(() => {
-  const hoje = new Date();
-  hoje.setHours(0, 0, 0, 0);
-  
-  return revisoes.value
-    .filter(revisao => !revisao.concluida)
-    .sort((a, b) => {
-      const dataA = converterStringParaData(a.dataRevisao);
-      const dataB = converterStringParaData(b.dataRevisao);
-      return dataA.getTime() - dataB.getTime();
-    });
-});
 
 const revisaoParaReagendar = ref<RevisaoResponseInterface | null>(null);
 const showReagendarDialog = ref(false);
 const novaData = ref('');
-const loading = ref(false);
+const loadingReagendar = ref(false);
 const loadingConclusao = ref<number | null>(null);
- 
+const nomeDisciplinas = ref<Record<number, string>>({});
+
+async function mudarPagina(novaPag: number) {
+  await atualizarPagina(novaPag - 1);
+};
+
+async function carregarRevisoes(pagina: number = page.value) {
+  await atualizarPagina(pagina);
+};
+
+function abrirDetalhes(revisao: RevisaoResponseInterface) {
+  emit('ver-detalhes', revisao);
+}
 
 async function concluirRevisaoItem(revisao: RevisaoResponseInterface) {
   loadingConclusao.value = revisao.id;
   try {
-    const revisaoConcluida = await concluirRevisao(revisao.id);
+    const revisaoConcluida = await revisaoStore.concluirRevisao(revisao.id);
     
-    const index = revisoes.value.findIndex(r => r.id === revisao.id);
-    if (index !== -1) {
-      revisoes.value.splice(index, 1);
-      
-      if (revisoes.value.length === 0 && page.value > 0) {
-        await carregarRevisoes(page.value - 1);
-      } else {
-        await carregarRevisoes(page.value);
-      }
-    }
+    await recarregarPaginaAtual();
     
     emit('atualizar', revisaoConcluida);
     
   } catch (error) {
     console.error('Erro ao concluir revisão:', error);
     alert('Erro ao concluir revisão');
-    await carregarRevisoes(page.value);
   } finally {
     loadingConclusao.value = null;
   }
@@ -95,7 +80,8 @@ async function confirmarReagendamento(){
     alert('Data inválida. Use o formato DD/MM/AAAA');
     return;
   }
-  loading.value = true;
+  
+  loadingReagendar.value = true;
 
   const hoje = new Date();
   hoje.setHours(0, 0, 0, 0);
@@ -108,34 +94,24 @@ async function confirmarReagendamento(){
     alert('Limite para reagendamento: até 5 dias atrás');
     return;
   }
+  
   try {
-    const revisaoReagendada = await reagendarDataRevisao(revisaoParaReagendar.value.id, novaData.value);
+    const revisaoReagendada = await revisaoStore.reagendarDataRevisao(
+      revisaoParaReagendar.value.id, 
+      novaData.value
+    );
     
-    const index = revisoes.value.findIndex(r => r.id === revisaoParaReagendar.value!.id);
-    if (index !== -1) {
-      revisoes.value[index] = { ...revisaoReagendada };
-      
-      const textoParaData = converterStringParaData(novaData.value);
-      const hoje = new Date();
-      hoje.setHours(0, 0, 0, 0);
-      
-      if (textoParaData < hoje) {
-        revisoes.value.splice(index, 1);
-      }
-    }
+    // Recarregue a página atual
+    await recarregarPaginaAtual();
     
     emit('atualizar', revisaoReagendada);
-
-    await carregarRevisoes(page.value);
-    
     fecharModalReagendar();
     
-    // criar naotification store paraa tratar
     const textoParaData = converterStringParaData(novaData.value);
     const hoje = new Date();
     hoje.setHours(0, 0, 0, 0);
     
-    if (textoParaData < hoje) {
+    if (textoParaData.getTime() < hoje.getTime()) {
       setTimeout(() => {
         alert('Revisão reagendada para data passada. Verifique a aba "Atrasadas".');
       }, 300);
@@ -145,15 +121,12 @@ async function confirmarReagendamento(){
     console.error('Erro ao reagendar revisão:', error);
     alert('Erro ao reagendar revisão: ' + error);
   } finally {
-    loading.value = false;
+    loadingReagendar.value = false;
   }
 }
 
-const nomeDisciplinas = ref<Record<number, string>>({});
-
 async function fetchNomeDisciplina(idEstudo: number) {
   if (!idEstudo) return;
-  if (nomeDisciplinas.value[idEstudo]) return;
   try {
     const nome = await nomeDisciplinaDoEstudo(idEstudo);
     nomeDisciplinas.value[idEstudo] = nome;
@@ -163,29 +136,49 @@ async function fetchNomeDisciplina(idEstudo: number) {
   }
 }
 
+const carregarNomesDisciplinas = async () => {
+  const promessas = revisoesDaPagina.value.map(r => fetchNomeDisciplina(r.idEstudo));
+  await Promise.all(promessas);
+};
+
 onMounted(async () => {
-  await carregarRevisoes(page.value);
-  revisoes.value.forEach(r => fetchNomeDisciplina(r.idEstudo));
+  await carregarRevisoes(0);
+  await carregarNomesDisciplinas();
 });
 
-watch(() => revisoes.value, (newVal) => {
-  newVal.forEach(r => fetchNomeDisciplina(r.idEstudo));
-}, { deep: true });
+watch(
+  () => revisoesDaPagina.value,
+  async () => {
+    await carregarNomesDisciplinas();
+  },
+  { deep: true }
+);
 
+watch(
+  () => props.key,
+  async () => {
+
+    await carregarRevisoes(0)
+    await carregarNomesDisciplinas()
+  }
+)
+
+watch(
+  () => page.value,
+  async () => {
+    await carregarNomesDisciplinas();
+  }
+);
 </script>
 
 <template>
   <v-card variant="flat">
     <v-card-title class="d-flex justify-space-between align-center">
-      <span>Revisões Atrasadas</span>
-      <v-chip color="warning">
-        {{ revisoesPendentes.length }}
-      </v-chip>
+      <span>Revisões Pendentes</span>
     </v-card-title>
     
-    
     <v-card-text>
-      <v-table v-if="revisoesPendentes.length > 0">
+      <v-table v-if="revisoesDaPagina.length > 0">
         <thead>
           <tr>
             <th>Data</th>
@@ -195,28 +188,33 @@ watch(() => revisoes.value, (newVal) => {
           </tr>
         </thead>
         <tbody>
-          <tr v-for="revisao in revisoesPendentes" :key="revisao.id">
+          <tr v-for="revisao in revisoesDaPagina" 
+          :key="revisao.id" 
+          class="revisao-pendente-row"
+          @click="abrirDetalhes(revisao)"
+          style="cursor: pointer;"
+          >
             <td>
-              <v-chip :color="revisao.dataRevisao < new Date().toLocaleDateString('pt-BR') ? 'red' : 'blue'">
+              <v-chip :color="converterStringParaData(revisao.dataRevisao).getTime() < new Date().getTime() ? 'warning' : 'warning'">
                 {{ revisao.dataRevisao }}
               </v-chip>
             </td>
             <td>
-             <v-chip color="primary" variant="flat">
-                  {{ nomeDisciplinas[revisao.idEstudo] || "Carregando..." }}
+              <v-chip color="primary" variant="flat">
+                {{ nomeDisciplinas[revisao.idEstudo] || "Carregando..." }}
               </v-chip>
-            </td> 
+            </td>
             <td>
               <v-chip :color="revisao.concluida ? 'success' : 'warning'">
                 {{ revisao.concluida ? 'Concluída' : 'Pendente' }}
               </v-chip>
             </td>
-            <td>
+            <td @click.stop>
               <div class="d-flex gap-1 justify-end">
                 <v-btn
                   size="small"
                   color="success"
-                  @click="concluirRevisaoItem(revisao)"
+                  @click.stop="concluirRevisaoItem(revisao)"
                   :loading="loadingConclusao === revisao.id"
                 >
                   <v-icon icon="mdi-check" class="mr-2" />
@@ -225,7 +223,7 @@ watch(() => revisoes.value, (newVal) => {
                 <v-btn
                   size="small"
                   color="warning"
-                  @click="abrirModalReagendar(revisao)"
+                  @click.stop="abrirModalReagendar(revisao)"
                 >
                   Reagendar
                 </v-btn>
@@ -282,23 +280,17 @@ watch(() => revisoes.value, (newVal) => {
           </div>
         </v-card-text>
         <v-card-actions>
-
-
-        <v-spacer />
-
-        <div class="d-flex gap-2 mt-4 justify-end">
-          <v-btn color="grey" @click="fecharModalReagendar">  
-            <v-icon icon="mdi-close" class="mr-2" /> 
-            Cancelar
-          </v-btn>
-          <v-btn color="primary" @click="confirmarReagendamento" :loading="loading">
-            <v-icon icon="mdi-check" class="mr-2" />
-            Reagendar
-          </v-btn>
-        </div>
-
-
-
+          <v-spacer />
+          <div class="d-flex gap-2 mt-4 justify-end">
+            <v-btn color="grey" @click="fecharModalReagendar">  
+              <v-icon icon="mdi-close" class="mr-2" /> 
+              Cancelar
+            </v-btn>
+            <v-btn color="primary" @click="confirmarReagendamento" :loading="loadingReagendar">
+              <v-icon icon="mdi-check" class="mr-2" />
+              Reagendar
+            </v-btn>
+          </div>
         </v-card-actions>
       </v-card>
     </v-dialog>
@@ -306,7 +298,15 @@ watch(() => revisoes.value, (newVal) => {
 </template>
 
 <style scoped>
+.revisao-pendente-row:hover {
+  background-color: rgba(33, 150, 243, 0.04);
+}
+
 .gap-1 {
   gap: 4px;
+}
+
+.gap-2 {
+  gap: 8px;
 }
 </style>

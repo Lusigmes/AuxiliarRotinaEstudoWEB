@@ -1,163 +1,226 @@
 <script setup lang="ts">
 import type { RevisaoResponseInterface } from '@/types';
-import { converterStringParaData, formatarDataParaPTBR } from '@/utils/dateUtils';
-import { computed } from 'vue';
-import { ref } from 'vue';
+import { nomeDisciplinaDoEstudo } from '@/api/EstudoService';
+import { ref, watch } from 'vue';
+import { formatarDataParaExibicao } from '@/utils/dateUtils';
 
-
-interface Props{
-    revisoes: RevisaoResponseInterface[];
-    loading?: boolean;
-    titulo: string;
-    tipo: 'pendentes' | 'atrasadas'  | 'todas' ;
+interface Props {
+  visivel: boolean;
+  data: Date | null;
+  revisoes: RevisaoResponseInterface[];
 }
 
 const props = defineProps<Props>();
+
 const emit = defineEmits<{
-   (e: 'selecionar-revisao', revisao: RevisaoResponseInterface): void;  
+  (e: 'fechar'): void;
+  (e: 'selecionar-revisao', revisao: RevisaoResponseInterface): void;
+  (e: 'ver-detalhes', payload: { revisao: RevisaoResponseInterface, origemLista: boolean }): void;
+}>();
 
-}>()
+const revisoesComNomes = ref<Array<RevisaoResponseInterface & { nomeDisciplina: string }>>([]);
+const loadingNomes = ref(false);
 
-const revisoesOrdenadas = computed(() => {
-  return [...props.revisoes].sort((a, b) => {
-    const dataA = converterStringParaData(a.dataRevisao);
-    const dataB = converterStringParaData(b.dataRevisao);
-    return dataA.getTime() - dataB.getTime();
-  });
-});
+// function formatarDataParaExibicao(data: Date | null): string {
+//   if (!data) return '';
+//   return data.toLocaleDateString('pt-BR', {
+//     weekday: 'long',
+//     day: '2-digit',
+//     month: 'long',
+//     year: 'numeric'
+//   }).replace(/^\w/, c => c.toUpperCase());
+// }
 
-// Cor do status
-function corStatus(revisao: RevisaoResponseInterface) {
-  if (revisao.concluida) return 'green';
-  if (props.tipo === 'atrasadas') return 'red';
-  return 'orange';
+async function carregarNomesDisciplinas() {
+  if (props.revisoes.length === 0) {
+    revisoesComNomes.value = [];
+    return;
+  }
+
+  loadingNomes.value = true;
+  try {
+    const revisoesComNomesPromises = props.revisoes.map(async (revisao) => {
+      try {
+        const nomeDisciplina = await nomeDisciplinaDoEstudo(revisao.idEstudo);
+        return {
+          ...revisao,
+          nomeDisciplina
+        };
+      } catch (error) {
+        console.error('Erro ao buscar nome da disciplina:', error);
+        return {
+          ...revisao,
+          nomeDisciplina: '—'
+        };
+      }
+    });
+
+    revisoesComNomes.value = await Promise.all(revisoesComNomesPromises);
+  } finally {
+    loadingNomes.value = false;
+  }
 }
 
-// Ícone do status
-function iconeStatus(revisao: RevisaoResponseInterface) {
-  if (revisao.concluida) return 'mdi-check-circle';
-  if (props.tipo === 'atrasadas') return 'mdi-alert-circle';
-  return 'mdi-clock-alert';
-}
+watch(
+  () => props.revisoes,
+  async () => {
+    if (props.visivel && props.revisoes.length > 0) {
+      await carregarNomesDisciplinas();
+    }
+  },
+  { deep: true }
+);
 
-// Texto do status
-function textoStatus(revisao: RevisaoResponseInterface) {
-  if (revisao.concluida) return 'Concluída';
-  if (props.tipo === 'atrasadas') return 'Atrasada';
-  return 'Pendente';
-}
+watch(
+  () => props.visivel,
+  async (visivel) => {
+    if (visivel && props.revisoes.length > 0) {
+      await carregarNomesDisciplinas();
+    } else {
+      revisoesComNomes.value = [];
+    }
+  }
+);
 
-// Verificar se a data é hoje
-function ehHoje(dataStr: string) {
-  const hoje = formatarDataParaPTBR(new Date());
-  return dataStr === hoje;
+function fecharModal() {
+  emit('fechar');
+}
+function abrirDetalhesDaLista(revisao: RevisaoResponseInterface) {
+  emit('ver-detalhes', { revisao, origemLista: true });
 }
 </script>
 
 <template>
-  <div class="lista-revisoes">
-    <!-- Cabeçalho -->
-    <div class="d-flex justify-space-between align-center mb-4">
-      <h3 class="text-h5 font-weight-bold">{{ titulo }}</h3>
-      <v-chip :color="tipo === 'atrasadas' ? 'red' : 'orange'" variant="flat">
-        {{ revisoes.length }} {{ revisoes.length === 1 ? 'revisão' : 'revisões' }}
-      </v-chip>
-    </div>
-
-    <!-- Lista -->
-    <div v-if="revisoesOrdenadas.length > 0" class="lista-container">
-      <v-card
-        v-for="revisao in revisoesOrdenadas"
-        :key="revisao.id"
-        class="mb-2 revisao-item"
-        variant="outlined"
-        @click="$emit('selecionar-revisao', revisao)"
-      >
-        <v-card-item class="py-2">
-          <template #prepend>
-            <v-avatar :color="corStatus(revisao)" variant="tonal" size="40">
-              <v-icon :icon="iconeStatus(revisao)" color="white" />
-            </v-avatar>
-          </template>
-
-          <v-card-title class="text-body-1 font-weight-medium">
-            Revisão #{{ revisao.id }}
-          </v-card-title>
-          
-          <v-card-subtitle class="d-flex align-center gap-2">
-            <v-chip
-              size="x-small"
-              :color="ehHoje(revisao.dataRevisao) ? 'primary' : 'grey'"
-              variant="flat"
+  <v-dialog :model-value="visivel" max-width="900px" scrollable @update:model-value="!$event && fecharModal()">
+    <v-card v-if="data">
+      <v-card-title class="d-flex justify-space-between align-center">
+        <div>
+          <span class="text-h5">Revisões do dia</span>
+          <div class="text-subtitle-1 text-grey">
+            {{ formatarDataParaExibicao(data) }}
+          </div>
+        </div>
+        <v-btn icon @click="fecharModal" elevation="0">
+          <v-icon>mdi-close</v-icon>
+        </v-btn>
+      </v-card-title>
+      
+      <v-divider />
+      
+      <v-card-text class="pt-4">
+        <div v-if="loadingNomes" class="text-center py-8">
+          <v-progress-circular indeterminate />
+          <div class="mt-4">Carregando disciplinas...</div>
+        </div>
+        
+        <div v-else-if="revisoesComNomes.length > 0" class="grid-revisoes-dia">
+          <div class="grid-container">
+            <div 
+              v-for="(revisao, index) in revisoesComNomes" 
+              :key="revisao.id"
+              class="grid-item"
             >
-              <v-icon size="12" class="mr-1">mdi-calendar</v-icon>
-              {{ revisao.dataRevisao }}
-              <v-icon v-if="ehHoje(revisao.dataRevisao)" size="12" class="ml-1">mdi-star</v-icon>
-            </v-chip>
-            
-            <v-chip size="x-small" :color="corStatus(revisao)" variant="outlined">
-              {{ textoStatus(revisao) }}
-            </v-chip>
-          </v-card-subtitle>
-
-          <template #append>
-            <v-btn icon size="small" variant="text">
-              <v-icon>mdi-chevron-right</v-icon>
-            </v-btn>
-          </template>
-        </v-card-item>
-      </v-card>
-    </div>
-
-    <!-- Sem revisões -->
-    <v-card v-else variant="flat" class="text-center py-8">
-      <v-card-text>
-        <v-icon
-          size="64"
-          :color="tipo === 'atrasadas' ? 'grey-lighten-1' : 'orange-lighten-3'"
-          class="mb-4"
-        >
-          {{ tipo === 'atrasadas' ? 'mdi-check-all' : 'mdi-check-circle-outline' }}
-        </v-icon>
-        <h3 class="text-h6 text-medium-emphasis mb-2">
-          {{ tipo === 'pendentes' ? 'Nenhuma revisão pendente' : 
-             tipo === 'atrasadas' ? 'Nenhuma revisão atrasada' : 
-             'Nenhuma revisão encontrada' }}
-        </h3>
-        <p class="text-body-2 text-medium-emphasis">
-          {{ tipo === 'pendentes' ? 'Todas as revisões estão em dia!' :
-             tipo === 'atrasadas' ? 'Ótimo! Você está em dia com suas revisões' :
-             'Registre estudos para ver revisões aqui' }}
-        </p>
+              <v-card variant="outlined" class="h-100 revisao-card">
+                <v-card-item class="pa-3">
+                  <div class="d-flex justify-space-between align-start mb-2">
+                    <v-chip 
+                      :color="revisao.concluida ? 'success' : 'warning'" 
+                      size="small"
+                      class="font-weight-medium"
+                    >
+                      {{ revisao.concluida ? 'CONCLUÍDA' : 'PENDENTE' }}
+                    </v-chip>
+                    <span class="text-caption text-grey">#{{ index + 1 }}</span>
+                  </div>
+                  
+                  <div class="mb-3">
+                    <div class="text-subtitle-2 font-weight-bold mb-1">
+                      {{ revisao.nomeDisciplina }}
+                    </div>
+                  </div>
+                  
+                  <v-divider class="my-2" />
+                  
+                  <div class="d-flex justify-space-between align-center">
+                    <div class="d-flex align-center">
+                      <v-icon size="16" class="mr-1" color="primary">mdi-calendar</v-icon>
+                      <span class="text-caption">{{ revisao.dataRevisao }}</span>
+                    </div>
+                                        
+                    <v-btn
+                      icon
+                      size="x-small"
+                      variant="text"
+                      color="primary"
+                      @click.stop="abrirDetalhesDaLista(revisao)"
+                    >
+                      <v-icon>mdi-open-in-new</v-icon>
+                    </v-btn>
+                  </div>
+                </v-card-item>
+              </v-card>
+            </div>
+          </div>
+        </div>
+        
+        <v-card v-else variant="flat" class="text-center py-8">
+          <v-card-text>
+            <v-icon size="64" color="grey-lighten-1" class="mb-4">mdi-calendar-blank</v-icon>
+            <h3 class="text-h6 text-grey">Nenhuma revisão neste dia</h3>
+            <p class="text-body-2 text-grey mt-2">
+              Não há revisões agendadas para {{ formatarDataParaExibicao(data) }}
+            </p>
+          </v-card-text>
+        </v-card>
       </v-card-text>
+      
+      <v-card-actions class="pa-4">
+        <v-spacer />
+        <v-btn color="primary" @click="fecharModal">
+          Fechar
+        </v-btn>
+      </v-card-actions>
     </v-card>
-  </div>
+  </v-dialog>
 </template>
 
 <style scoped>
-.lista-container {
-  max-height: 500px;
-  overflow-y: auto;
+.grid-revisoes-dia .grid-container {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 16px;
 }
 
-.revisao-item {
+.grid-revisoes-dia .grid-item {
+  min-height: 140px;
+}
+
+.grid-revisoes-dia .revisao-card {
   cursor: pointer;
   transition: all 0.2s ease;
 }
 
-.revisao-item:hover {
-  background-color: rgba(0, 0, 0, 0.02);
+.grid-revisoes-dia .revisao-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
   border-color: rgb(var(--v-theme-primary));
-  transform: translateX(2px);
 }
 
-:deep(.revisao-item .v-card-title) {
-  padding-top: 4px;
-  padding-bottom: 4px;
+.h-100 {
+  height: 100%;
 }
 
-:deep(.revisao-item .v-card-subtitle) {
-  padding-top: 0;
-  padding-bottom: 0;
+@media (max-width: 960px) {
+  .grid-revisoes-dia .grid-container {
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 12px;
+  }
+}
+
+@media (max-width: 600px) {
+  .grid-revisoes-dia .grid-container {
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: 8px;
+  }
 }
 </style>

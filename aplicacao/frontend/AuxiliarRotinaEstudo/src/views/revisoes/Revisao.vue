@@ -1,12 +1,13 @@
 <script setup lang="ts">
-import { contarRevisoesAtrasadas, contarRevisoesPendentes, listarRevisoes, listarRevisoesAtrasadas, listarRevisoesPendentes } from '@/api/RevisaoService';
 import type { RevisaoResponseInterface } from '@/types';
-import { onMounted, ref } from 'vue';
+import { computed, onMounted, ref, watch } from 'vue';
 import RevisaoDetalhe from './RevisaoDetalhe.vue';
 import RevisaoCalendario from './RevisaoCalendario.vue';
 import RevisoesPendentes from './RevisoesPendentes.vue';
 import RevisoesAtrasadas from './RevisoesAtrasadas.vue';
 import { converterStringParaData } from '@/utils/dateUtils';
+import { useRevisaoStore } from '@/stores/revisaoStore';
+import RevisoesConcluidas from './RevisoesConcluidas.vue';
 
 const breadcrumbs = [
   { title: 'Dashboard', disabled: false, to: '/tela-principal' },
@@ -14,87 +15,83 @@ const breadcrumbs = [
 ];
 
 const abaAtiva = ref('calendario');
-const loading = ref(false);
-
-const revisoes = ref<RevisaoResponseInterface[]>([]);
 const revisaoSelecionada = ref<RevisaoResponseInterface | null>(null);
+const origemDetalhesLista = ref(false); 
 
-const contadorPendentes = ref(0);
-const contadorAtrasadas = ref(0);
+const recarregarPendentes = ref(0)
+const recarregarAtrasadas = ref(0)
+const recarregarConcluidas = ref(0)
 
-async function carregarContadores(){
-  try{
-    contadorPendentes.value = await contarRevisoesPendentes();
-    contadorAtrasadas.value = await contarRevisoesAtrasadas();
+const revisaoStore = useRevisaoStore();
+  
+const revisoes = computed(() => revisaoStore.todasRevisoes);
+const contadorPendentes = computed(() => revisaoStore.contadorPendentes);
+const contadorAtrasadas = computed(() => revisaoStore.contadorAtrasadas);
+const contadorConcluidas = computed(() => revisaoStore.contadorConcluidas);
+const loading = computed(() => revisaoStore.loading);
 
-  }catch(error){
-    console.error('Erro ao carregar contadores:', error);
-    contadorPendentes.value =0;
-    contadorAtrasadas.value =0;
-
-  }
-}
-async function carregarRevisoes() {
-  loading.value = true;
-  try{
-    revisoes.value = await listarRevisoes();
-    await carregarContadores();
-  } catch (error) {
-    console.error('Erro ao carregar revisões:', error);
-    alert('Erro ao carregar revisões. Tente novamente.');
-  } finally {
-    loading.value = false;
-  }
-};
-
-function abrirDetalhesRevisao(revisao: RevisaoResponseInterface){
-  revisaoSelecionada.value = revisao;
+function abrirDetalhesRevisao(payload: { revisao: RevisaoResponseInterface, origemLista?: boolean }) {
+  revisaoSelecionada.value = payload.revisao;
+  origemDetalhesLista.value = payload.origemLista || false;
 };
 
 function fecharDetalhes(){
   revisaoSelecionada.value = null;
+  origemDetalhesLista.value = false;
+};
+
+function abrirDetalhesRevisaoSimples(revisao: RevisaoResponseInterface) {
+  revisaoSelecionada.value = revisao;
+  origemDetalhesLista.value = false;
 };
 
 async function atualizarListas(){
-  await carregarRevisoes();
-  await carregarContadores();
+  await revisaoStore.carregarTodasRevisoes();
 };
-
-
-const forceUpdateKey = ref(0);
-
-function forcarAtualizacao() {
-  forceUpdateKey.value += 1;
-  atualizarListas();
-}
 
 function onRevisaoAtualizada(revisao: RevisaoResponseInterface) {
   if (!revisao || !revisao.dataRevisao) {
-    console.error('Revisão ou dataRevisao está indefinido:', revisao);
-    atualizarListas();
-    return;
+    console.error('Revisão ou dataRevisao está indefinido:', revisao)
+    atualizarListas()
+    return
   }
   
-  const dataRevisao = converterStringParaData(revisao.dataRevisao);
-  const hoje = new Date();
-  hoje.setHours(0, 0, 0, 0);
+  const dataRevisao = converterStringParaData(revisao.dataRevisao)
+  const hoje = new Date()
+  hoje.setHours(0, 0, 0, 0)
   
-  
-  atualizarListas();
-  forcarAtualizacao();
-  
+  setTimeout(async () => {
+    await revisaoStore.carregarTodasRevisoes()
+    
+    if (revisao.concluida) {
+      recarregarConcluidas.value++
+    } else if (dataRevisao < hoje) {
+      recarregarAtrasadas.value++
+      setTimeout(() => {
+        alert('Revisão atualizada para data passada. Verifique a aba "Atrasadas".')
+        abaAtiva.value = 'atrasadas'
+      }, 100)
+    } else if (dataRevisao >= hoje) {
+      recarregarPendentes.value++
+    }
+  }, 100)
+};
 
-  if (dataRevisao < hoje && !revisao.concluida) {
-    setTimeout(() => {
-      alert('Revisão atualizada para data passada. Verifique a aba "Atrasadas".');
-    }, 500);
+watch(() => abaAtiva.value, async (novaAba) => {
+  await revisaoStore.atualizarContadores();
+  
+  if (novaAba === 'pendentes') {
+    recarregarPendentes.value++;
+  } else if (novaAba === 'atrasadas') {
+    recarregarAtrasadas.value++;
+  } else if (novaAba === 'concluidas') {
+    recarregarConcluidas.value++;
   }
-}
+});
 
-onMounted( async() =>{
-  await carregarRevisoes();
-})
-
+onMounted(async () => {
+  await revisaoStore.inicializar();
+});
 </script>
 
 <template>
@@ -106,7 +103,7 @@ onMounted( async() =>{
     <v-card variant="flat" class="mb-6">
       <v-card-item>
         <template #prepend>
-          <v-avatar color="purple" variant="tonal" size="48">
+          <v-avatar color="orange" variant="tonal" size="48">
             <v-icon icon="mdi-calendar-check" />
           </v-avatar>
         </template>
@@ -118,51 +115,29 @@ onMounted( async() =>{
       </v-card-item>
     </v-card>
 
-  <v-card variant="flat" class="mb-4">
-      <v-tabs 
-        v-model="abaAtiva" 
-       color="primary" 
-        slider-color="primary"
-        class="tabs-no-bg"
-      >
-        <v-tab 
-          value="calendario"
-          :class="{'active-tab': abaAtiva === 'calendario'}"
-        >
+    <v-card variant="flat" class="mb-4">
+      <v-tabs v-model="abaAtiva" color="primary" slider-color="primary" class="tabs-no-bg">
+        <v-tab value="calendario" :class="{'active-tab': abaAtiva === 'calendario'}">
           <v-icon start>mdi-calendar-month</v-icon>
           Visão Geral
         </v-tab>
-        <v-tab
-        color="warning"
-        value="pendentes"
-        :class="{'active-tab': abaAtiva === 'pendentes'}"
-        >
-        <v-icon start>mdi-clock-outline</v-icon>
-        Pendentes
-          <v-badge 
-            v-if="contadorPendentes > 0" 
-            color="warning" 
-            :content="contadorPendentes" 
-            inline 
-            class="ml-2" 
-          />
+        <v-tab color="warning" value="pendentes" :class="{'active-tab': abaAtiva === 'pendentes'}">
+          <v-icon start>mdi-clock-outline</v-icon>
+          Pendentes
+          <v-badge v-if="contadorPendentes > 0" color="warning" :content="contadorPendentes" inline class="ml-2" />
         </v-tab>
-        <v-tab 
-        color="error"
-          value="atrasadas"
-          :class="{'active-tab': abaAtiva === 'atrasadas'}"
-        >
+        <v-tab color="error" value="atrasadas" :class="{'active-tab': abaAtiva === 'atrasadas'}">
           <v-icon start>mdi-alert-circle-outline</v-icon>
           Atrasadas
-          <v-badge 
-            v-if="contadorAtrasadas > 0" 
-            color="error" 
-            :content="contadorAtrasadas" 
-            inline 
-            class="ml-2" 
-            />
+          <v-badge v-if="contadorAtrasadas > 0" color="error" :content="contadorAtrasadas" inline class="ml-2" />
+        </v-tab>
+        <v-tab color="success" value="concluidas" :class="{'active-tab': abaAtiva === 'concluidas'}">
+          <v-icon start>mdi-check-circle-outline</v-icon>
+          Concluídas
+          <v-badge v-if="contadorConcluidas > 0" color="success" :content="contadorConcluidas" inline class="ml-2" />
         </v-tab>
       </v-tabs>
+      
       <v-window v-model="abaAtiva">
         <v-window-item value="calendario">
           <RevisaoCalendario 
@@ -173,16 +148,24 @@ onMounted( async() =>{
 
         <v-window-item value="pendentes">
           <RevisoesPendentes 
-           :key="'pendentes-' + forceUpdateKey"
+            :key="recarregarPendentes"
+            @ver-detalhes="abrirDetalhesRevisaoSimples"
             @atualizar="onRevisaoAtualizada"
           />
         </v-window-item>
 
         <v-window-item value="atrasadas">
           <RevisoesAtrasadas 
-           :key="'atrasadas-' + forceUpdateKey"
-            @ver-detalhes="abrirDetalhesRevisao"
-            @atualizar="forcarAtualizacao"
+            :key="recarregarAtrasadas"
+            @ver-detalhes="abrirDetalhesRevisaoSimples"
+            @atualizar="onRevisaoAtualizada"
+          />
+        </v-window-item>
+        
+        <v-window-item value="concluidas">
+          <RevisoesConcluidas 
+            :key="recarregarConcluidas"
+            @ver-detalhes="abrirDetalhesRevisaoSimples"
           />
         </v-window-item>
       </v-window>
@@ -197,6 +180,7 @@ onMounted( async() =>{
 
     <RevisaoDetalhe 
       :revisao="revisaoSelecionada"
+      :origem-lista="origemDetalhesLista"
       @fechar="fecharDetalhes"
       @atualizar="atualizarListas"
     />

@@ -59,3 +59,27 @@ export const verificarDataHoje = (dataString: string): boolean => {
   return formatarDataParaPTBR(data) === formatarDataParaPTBR(hoje);
 };
 
+export const formatarDataParaExibicao = (
+    dataInput: Date | string | null,
+    locale: string = 'pt-BR',
+    options: Intl.DateTimeFormatOptions = { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' }
+): string => {
+    if (!dataInput) return '';
+
+    let data: Date;
+    if (typeof dataInput === 'string') {
+        if (validarFormatoData(dataInput)) {
+            data = converterStringParaData(dataInput);
+        } else {
+            const parsed = new Date(dataInput);
+            if (isNaN(parsed.getTime())) return dataInput;
+            data = parsed;
+        }
+    } else {
+        data = dataInput;
+    }
+
+    const formatted = data.toLocaleDateString(locale, options);
+    return formatted.replace(/^^\p{L}/u, c => c.toUpperCase());
+};
+

@@ -1,47 +1,53 @@
-import { defineStore } from "pinia";
-import { ref, computed } from "vue";
+import { defineStore } from 'pinia'
+import { ref, computed, reactive } from 'vue'
 import { 
-  listarRevisoes, 
-  contarRevisoesPendentes, 
+  listarRevisoes,
+  contarRevisoesPendentes,
   contarRevisoesAtrasadas,
-  concluirRevisao,
-  reagendarDataRevisao
-} from "@/api/RevisaoService";
-import type { RevisaoResponseInterface } from "@/types";
-import { converterStringParaData } from "@/utils/dateUtils";
+  contarRevisoesConcluidas,
+  concluirRevisao as apiConcluirRevisao,
+  reagendarDataRevisao as apiReagendarDataRevisao
+} from '@/api/RevisaoService'
+import type { RevisaoResponseInterface } from '@/types'
+import { converterStringParaData } from '@/utils/dateUtils'
 
 export const useRevisaoStore = defineStore('revisao', () => {
-  const revisoes = ref<RevisaoResponseInterface[]>([]);
+  const revisoesMap = reactive(new Map<number, RevisaoResponseInterface>());
+  
   const contadorPendentes = ref(0);
   const contadorAtrasadas = ref(0);
+  const contadorConcluidas = ref(0);
   const loading = ref(false);
-  
+
+  const todasRevisoes = computed(() => Array.from(revisoesMap.values()));
+
+
   const revisoesPendentes = computed(() => {
     const hoje = new Date();
     hoje.setHours(0, 0, 0, 0);
     
-    return revisoes.value
+    return todasRevisoes.value
       .filter(revisao => !revisao.concluida)
       .filter(revisao => {
         const dataRevisao = converterStringParaData(revisao.dataRevisao);
-        return dataRevisao <= hoje;
+        return dataRevisao.getTime() <= hoje.getTime();
       })
       .sort((a, b) => {
         const dataA = converterStringParaData(a.dataRevisao);
         const dataB = converterStringParaData(b.dataRevisao);
         return dataA.getTime() - dataB.getTime();
-      });
+      })
   });
-  
+
   const revisoesAtrasadas = computed(() => {
     const hoje = new Date();
     hoje.setHours(0, 0, 0, 0);
     
-    return revisoes.value
+    return todasRevisoes.value
       .filter(revisao => !revisao.concluida)
       .filter(revisao => {
         const dataRevisao = converterStringParaData(revisao.dataRevisao);
-        return dataRevisao < hoje;
+        return dataRevisao.getTime() < hoje.getTime();
       })
       .sort((a, b) => {
         const dataA = converterStringParaData(a.dataRevisao);
@@ -49,11 +55,30 @@ export const useRevisaoStore = defineStore('revisao', () => {
         return dataA.getTime() - dataB.getTime();
       });
   });
-  
+
+  const revisoesConcluidas = computed(() => {
+    return todasRevisoes.value
+      .filter(revisao => revisao.concluida)
+      .sort((a, b) => {
+        const dataA = converterStringParaData(a.dataRevisao);
+        const dataB = converterStringParaData(b.dataRevisao);
+        return dataB.getTime() - dataA.getTime();
+      });
+  });
+
+
+  const atualizarRevisaoNoMap = (revisao: RevisaoResponseInterface) => {
+    revisoesMap.set(revisao.id, { ...revisao });
+  }
+
   async function carregarTodasRevisoes() {
     loading.value = true;
     try {
-      revisoes.value = await listarRevisoes();
+      const revisoes = await listarRevisoes();
+      revisoesMap.clear();
+      revisoes.forEach(revisao => {
+        atualizarRevisaoNoMap(revisao);
+      })
       await atualizarContadores();
     } catch (error) {
       console.error('Erro ao carregar revisões:', error);
@@ -62,26 +87,27 @@ export const useRevisaoStore = defineStore('revisao', () => {
       loading.value = false;
     }
   }
-  
+
   async function atualizarContadores() {
     try {
-      [contadorPendentes.value, contadorAtrasadas.value] = await Promise.all([
+      const [pendentes, atrasadas, concluidas] = await Promise.all([
         contarRevisoesPendentes(),
-        contarRevisoesAtrasadas()
+        contarRevisoesAtrasadas(),
+        contarRevisoesConcluidas()
       ]);
+      contadorPendentes.value = pendentes;
+      contadorAtrasadas.value = atrasadas;
+      contadorConcluidas.value = concluidas ;
     } catch (error) {
       console.error('Erro ao atualizar contadores:', error);
     }
-  }
-  
-  async function concluir(idRevisao: number) {
+  };
+
+  async function concluirRevisao(idRevisao: number) {
     try {
-      const revisaoAtualizada = await concluirRevisao(idRevisao);
+      const revisaoAtualizada = await apiConcluirRevisao(idRevisao);
       
-      const index = revisoes.value.findIndex(r => r.id === idRevisao);
-      if (index !== -1) {
-        revisoes.value[index] = revisaoAtualizada;
-      }
+      atualizarRevisaoNoMap(revisaoAtualizada);
       
       await atualizarContadores();
       
@@ -90,18 +116,13 @@ export const useRevisaoStore = defineStore('revisao', () => {
       console.error('Erro ao concluir revisão:', error);
       throw error;
     }
-  }
-  
-  async function reagendar(idRevisao: number, novaData: string) {
+  };
+
+  async function reagendarDataRevisao(idRevisao: number, novaData: string) {
     try {
-      const revisaoAtualizada = await reagendarDataRevisao(idRevisao, novaData);
+      const revisaoAtualizada = await apiReagendarDataRevisao(idRevisao, novaData);
       
-      const index = revisoes.value.findIndex(r => r.id === idRevisao);
-      if (index !== -1) {
-        revisoes.value[index] = revisaoAtualizada;
-      } else {
-        revisoes.value.push(revisaoAtualizada);
-      }
+      atualizarRevisaoNoMap(revisaoAtualizada);
       
       await atualizarContadores();
       
@@ -110,25 +131,37 @@ export const useRevisaoStore = defineStore('revisao', () => {
       console.error('Erro ao reagendar revisão:', error);
       throw error;
     }
-  }
-  
+  };
+
   async function inicializar() {
     await carregarTodasRevisoes();
-  }
-  
+  };
+
+  function limparStore() {
+    revisoesMap.clear();
+    contadorPendentes.value = 0;
+    contadorAtrasadas.value = 0;
+    loading.value = false;
+  };
+
   return {
-    revisoes,
+    todasRevisoes,
     contadorPendentes,
     contadorAtrasadas,
+    contadorConcluidas, 
     loading,
     
     revisoesPendentes,
-    revisoesAtrasadas,
+    revisoesAtrasadas,  
+    revisoesConcluidas,
     
     carregarTodasRevisoes,
+    concluirRevisao,
+    reagendarDataRevisao,
     atualizarContadores,
-    concluir,
-    reagendar,
-    inicializar
-  };
+    inicializar,
+    limparStore,
+    
+    atualizarRevisaoNoMap
+  }
 });

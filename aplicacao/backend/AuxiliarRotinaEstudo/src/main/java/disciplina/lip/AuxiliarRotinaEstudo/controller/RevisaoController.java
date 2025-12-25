@@ -13,10 +13,10 @@ import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
 
 import disciplina.lip.AuxiliarRotinaEstudo.dto.RevisaoResponseDTO;
 import disciplina.lip.AuxiliarRotinaEstudo.dto.RevisaoUpdateDTO;
@@ -117,4 +117,31 @@ public class RevisaoController {
         revisaoRepository.deleteById(idRevisao);
         return ResponseEntity.status(HttpStatus.NO_CONTENT).build();
     }    
+
+    @CrossOrigin
+    @GetMapping("/concluidas")
+    public ResponseEntity<List<RevisaoResponseDTO>> visualizarConcluidas(@AuthenticationPrincipal Usuario usuario) {
+        List<Revisao> revisoesConcluidas = revisaoService.listarRevisoesConcluidas(usuario);
+        List<RevisaoResponseDTO> responseDTOs = revisoesConcluidas.stream()
+            .map(revisao -> revisaoService.revisaoToDTO(revisao))
+            .collect(Collectors.toList());
+        
+        return ResponseEntity.ok(responseDTOs);
+    }
+
+    @CrossOrigin
+    @GetMapping("/concluidas/page")
+    public ResponseEntity<Page<RevisaoResponseDTO>> visualizarConcluidasPaginado(
+        @AuthenticationPrincipal Usuario usuario, 
+        Pageable pageable
+    ) {
+        return ResponseEntity.ok(revisaoService.listarRevisoesConcluidasPaginado(usuario, pageable));
+    }
+
+    @CrossOrigin
+    @GetMapping("/concluidas/contar")
+    public ResponseEntity<Long> contarConcluidas(@AuthenticationPrincipal Usuario usuario) {
+        long count = revisaoService.contarRevisoesConcluidas(usuario);
+        return ResponseEntity.ok(count);
+    }
 }

@@ -2,6 +2,7 @@
 import { computed, ref } from 'vue';
 import type { RevisaoResponseInterface } from '@/types';
 import { converterStringParaData, formatarDataParaPTBR } from '@/utils/dateUtils';
+import ListaRevisoes from './ListaRevisoes.vue';
 
 interface Props {
   revisoes: RevisaoResponseInterface[];
@@ -10,11 +11,16 @@ interface Props {
 
 const props = defineProps<Props>();
 const emit = defineEmits<{
-   (e: 'selecionar-revisao', revisao: RevisaoResponseInterface): void;  
+  (e: 'selecionar-revisao', revisao: RevisaoResponseInterface): void;  
+  (e: 'ver-detalhes', payload: { revisao: RevisaoResponseInterface, origemLista?: boolean }): void;  
 }>();
 
 const mesAtual = ref(new Date().getMonth());
 const anoAtual = ref(new Date().getFullYear());
+
+const modalVisivel = ref(false);
+const dataSelecionada = ref<Date | null>(null);
+const revisoesDoDia = ref<RevisaoResponseInterface[]>([]);
 
 const revisoesPorData = computed(() => {
   const agrupadas: Record<string, RevisaoResponseInterface[]> = {};
@@ -53,7 +59,6 @@ const nomeMes = computed(() => {
   }).replace(/^\w/, c => c.toUpperCase());
 });
 
-
 function mesAnterior() {
   if (mesAtual.value === 0) {
     mesAtual.value = 11;
@@ -78,6 +83,17 @@ function revisoesNoDia(data: Date | null): RevisaoResponseInterface[] {
   return revisoesPorData.value[dataStr] || [];
 }
 
+function abrirModalDoDia(data: Date) {
+  if (!data) return;
+  
+  dataSelecionada.value = data;
+  revisoesDoDia.value = revisoesNoDia(data);
+  
+  if (revisoesDoDia.value.length > 0) {
+    modalVisivel.value = true;
+  }
+}
+
 function formatarContagem(revisoes: RevisaoResponseInterface[]) {
   const pendentes = revisoes.filter(r => !r.concluida).length;
   const concluidas = revisoes.filter(r => r.concluida).length;
@@ -90,10 +106,24 @@ function formatarContagem(revisoes: RevisaoResponseInterface[]) {
 
 const diasSemana = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
 
+function fecharModal() {
+  modalVisivel.value = false;
+  dataSelecionada.value = null;
+  revisoesDoDia.value = [];
+}
+
+function selecionarRevisaoDoModal(revisao: RevisaoResponseInterface) {
+  fecharModal();
+  emit('selecionar-revisao', revisao);
+};
+
+function verDetalhesDoModal(payload: { revisao: RevisaoResponseInterface, origemLista: boolean }) {
+  emit('ver-detalhes', payload);  
+};
 </script>
+
 <template>
   <div class="calendario-revisoes">
-    <!-- Controles -->
     <div class="d-flex justify-space-between align-center mb-4">
       <div>
         <h3 class="text-h5 font-weight-bold">{{ nomeMes }}</h3>
@@ -118,7 +148,6 @@ const diasSemana = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
       </div>
     </div>
 
-    <!-- grade -->
     <div class="calendario-grid compacto">
       <div
         v-for="(dia, index) in diasDoMes"
@@ -129,7 +158,7 @@ const diasSemana = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
           'dia-hoje': dia && formatarDataParaPTBR(dia) === formatarDataParaPTBR(new Date()),
           'dia-com-revisoes': dia && revisoesNoDia(dia).length > 0
         }"
-        @click="dia && revisoesNoDia(dia).length > 0 && $emit('selecionar-revisao', revisoesNoDia(dia)[0]!)"
+        @click="dia && abrirModalDoDia(dia)"
       >
         <template v-if="dia">
           <div class="dia-numero compacto">
@@ -146,7 +175,6 @@ const diasSemana = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
     </div>  
   
     <div class="legenda mt-3">
-      
       <div class="d-flex align-center gap-3 justify-center">
         <div class="d-flex align-center gap-1">
           <div class="indicador-indisponivel"></div>
@@ -169,9 +197,7 @@ const diasSemana = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
         <div class="d-flex align-center gap-1">
           <span class="text-caption">✅ Revisões concluidas</span>
         </div>
-
       </div>
-
     </div>
     
     <v-card v-if="revisoes.length === 0 && !loading" variant="flat" class="text-center py-6 mt-3">
@@ -183,6 +209,15 @@ const diasSemana = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
         </p>
       </v-card-text>
     </v-card>
+
+      <lista-revisoes
+        :visivel="modalVisivel"
+        :data="dataSelecionada"
+        :revisoes="revisoesDoDia"
+        @fechar="fecharModal"
+        @selecionar-revisao="selecionarRevisaoDoModal"
+        @ver-detalhes="verDetalhesDoModal"  
+      />
   </div>
 </template>
 
@@ -207,11 +242,11 @@ const diasSemana = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
 }
 
 .dia-cell.compacto {
-  height: 70px; /* Reduzido de 100px */
+  height: 70px;
   min-height: 70px;
   border: 1px solid rgba(0, 0, 0, 0.12);
   border-radius: 6px;
-  padding: 4px; /* Reduzido de 8px */
+  padding: 4px;
   cursor: pointer;
   transition: all 0.2s ease;
   position: relative;
