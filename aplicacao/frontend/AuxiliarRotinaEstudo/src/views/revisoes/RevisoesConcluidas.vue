@@ -95,7 +95,7 @@ watch(
     <v-card-text>
       <div v-if="loadingNomes" class="text-center py-4">
         <v-progress-circular indeterminate size="20" />
-        <div class="text-caption mt-2">Carregando disciplinas...</div>
+        <div class="text-caption mt-2">Carregando revisões...</div>
       </div>
 
       <v-table v-else-if="revisoesDaPagina.length > 0">

@@ -21,16 +21,6 @@ const emit = defineEmits<{
 const revisoesComNomes = ref<Array<RevisaoResponseInterface & { nomeDisciplina: string }>>([]);
 const loadingNomes = ref(false);
 
-// function formatarDataParaExibicao(data: Date | null): string {
-//   if (!data) return '';
-//   return data.toLocaleDateString('pt-BR', {
-//     weekday: 'long',
-//     day: '2-digit',
-//     month: 'long',
-//     year: 'numeric'
-//   }).replace(/^\w/, c => c.toUpperCase());
-// }
-
 async function carregarNomesDisciplinas() {
   if (props.revisoes.length === 0) {
     revisoesComNomes.value = [];
@@ -110,7 +100,7 @@ function abrirDetalhesDaLista(revisao: RevisaoResponseInterface) {
       <v-card-text class="pt-4">
         <div v-if="loadingNomes" class="text-center py-8">
           <v-progress-circular indeterminate />
-          <div class="mt-4">Carregando disciplinas...</div>
+          <div class="mt-4">Carregando revisões...</div>
         </div>
         
         <div v-else-if="revisoesComNomes.length > 0" class="grid-revisoes-dia">

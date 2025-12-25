@@ -5,6 +5,7 @@ import { useRevisaoPaginada } from '@/composables/useRevisaoPaginada';
 import type { RevisaoResponseInterface } from '@/types';
 import { converterStringParaData, validarFormatoData } from '@/utils/dateUtils';
 import { ref, watch, onMounted } from 'vue';
+import ReagendarRevisaoModal from './ReagendarRevisaoModal.vue';
 
 const props = defineProps<{
   key?: number
@@ -26,8 +27,6 @@ const emit = defineEmits<{
 
 const revisaoParaReagendar = ref<RevisaoResponseInterface | null>(null);
 const showReagendarDialog = ref(false);
-const novaData = ref('');
-const loadingReagendar = ref(false);
 const loadingConclusao = ref<number | null>(null);
 const nomeDisciplinas = ref<Record<number, string>>({});
 
@@ -62,29 +61,20 @@ async function concluirRevisaoItem(revisao: RevisaoResponseInterface) {
 
 function abrirModalReagendar(revisao: RevisaoResponseInterface){
   revisaoParaReagendar.value = revisao;
-  novaData.value = revisao.dataRevisao;
   showReagendarDialog.value = true;
 };
 
 function fecharModalReagendar(){
   revisaoParaReagendar.value = null;
-  novaData.value = '';
   showReagendarDialog.value = false;
 };
 
-async function confirmarReagendamento(){
-  if(!revisaoParaReagendar.value || !novaData.value) return;
-
-  if (!validarFormatoData(novaData.value)) {
-    alert('Data inválida. Use o formato DD/MM/AAAA');
-    return;
-  }
-  
-  loadingReagendar.value = true;
+async function confirmarReagendamento(novaData: string){
+  if(!revisaoParaReagendar.value ) return;
 
   const hoje = new Date();
   hoje.setHours(0, 0, 0, 0);
-  const dataInformada = converterStringParaData(novaData.value);
+  const dataInformada = converterStringParaData(novaData);
   const cincoDiasAtras = new Date();
   cincoDiasAtras.setDate(cincoDiasAtras.getDate() - 5);
   cincoDiasAtras.setHours(0, 0, 0, 0);
@@ -97,7 +87,7 @@ async function confirmarReagendamento(){
   try {
     const revisaoReagendada = await revisaoStore.reagendarDataRevisao(
       revisaoParaReagendar.value.id, 
-      novaData.value
+      novaData
     );
     
     await recarregarPaginaAtual();
@@ -105,7 +95,7 @@ async function confirmarReagendamento(){
     emit('atualizar', revisaoReagendada);
     fecharModalReagendar();
     
-    const textoParaData = converterStringParaData(novaData.value);
+    const textoParaData = converterStringParaData(novaData);
     const hoje = new Date();
     hoje.setHours(0, 0, 0, 0);
     
@@ -118,12 +108,10 @@ async function confirmarReagendamento(){
   } catch (error) {
     console.error('Erro ao reagendar revisão:', error);
     alert('Erro ao reagendar revisão: ' + error);
-  } finally {
-    loadingReagendar.value = false;
-  }
+  } 
 }
 
-async function fetchNomeDisciplina(idEstudo: number) {
+async function associarNomeDisciplina(idEstudo: number) {
   if (!idEstudo) return;
   try {
     const nome = await nomeDisciplinaDoEstudo(idEstudo);
@@ -136,7 +124,7 @@ async function fetchNomeDisciplina(idEstudo: number) {
 
 
 const carregarNomesDisciplinas = async () => {
-  const promessas = revisoesDaPagina.value.map(r => fetchNomeDisciplina(r.idEstudo));
+  const promessas = revisoesDaPagina.value.map(r => associarNomeDisciplina(r.idEstudo));
   await Promise.all(promessas);
 };
 
@@ -237,12 +225,11 @@ watch(
 
       <v-card v-else variant="flat" class="text-center py-8">
         <v-card-text>
-          <v-icon size="64" color="success" class="mb-4">mdi-check-circle</v-icon>
+          <v-icon size="64" color="grey-lighten-1" class="mb-4">mdi-checkbox-marked-circle-outline</v-icon>
           <div class="text-h6 text-grey">Nenhuma revisão atrasada!</div>
           <div class="text-body-1 text-grey mt-2">Todas as revisões estão em dia</div>
         </v-card-text>
       </v-card>
-      
       <v-row 
         justify="center" 
         class="mt-4" 
@@ -261,41 +248,11 @@ watch(
       </v-row>
     </v-card-text>
 
-    <v-dialog v-model="showReagendarDialog" max-width="500px">
-      <v-card v-if="revisaoParaReagendar">
-        <v-card-title>Reagendar Revisão</v-card-title>
-        <v-card-text>
-          <v-text-field
-            v-model="novaData"
-            label="Nova Data"
-            placeholder="DD/MM/AAAA"
-            v-mask="'##/##/####'"
-            variant="outlined"
-            density="compact"
-            :rules="[v => !!v || 'Data é obrigatória']"
-          />
-          <div class="text-caption text-grey mt-2">
-            Data atual: {{ revisaoParaReagendar.dataRevisao }}
-          </div>
-          <div class="text-caption text-blue mt-1">
-            ⓘ Limite para datas passadas: 5 dias 
-          </div>
-        </v-card-text>
-        <v-card-actions>
-          <v-spacer />
-          <div class="d-flex gap-2 mt-4 justify-end">
-            <v-btn color="grey" @click="fecharModalReagendar">  
-              <v-icon icon="mdi-close" class="mr-2" /> 
-              Cancelar
-            </v-btn>
-            <v-btn color="primary" @click="confirmarReagendamento" :loading="loadingReagendar">
-              <v-icon icon="mdi-check" class="mr-2" />
-              Reagendar
-            </v-btn>
-          </div>
-        </v-card-actions>
-      </v-card>
-    </v-dialog>
+      <ReagendarRevisaoModal
+        v-model="showReagendarDialog"
+        :revisao="revisaoParaReagendar"
+        @reagendar="confirmarReagendamento"
+      />
   </v-card>
 </template>
 

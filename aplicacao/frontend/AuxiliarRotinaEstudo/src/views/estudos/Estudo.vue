@@ -12,8 +12,6 @@ const breadcrumbs = computed(() => [
 ]);
 
 const estado = ref<'semEstudos' |'visualizando'>('visualizando');
-// const loading = ref(false);
-// const estudos = ref<EstudoResponseInterface[]>([]);
 const removerEstudo = ref<number | null>(null);
 const modalAddEstudo = ref(false);
 
@@ -25,14 +23,31 @@ const textoEditando = ref({
   diaDoEstudo: ''
 });
 
-// paginando
+const todosEstudosMap = ref(new Map<number, EstudoResponseInterface>());
+
 const {
-  items: estudos,
+  items: estudosPaginados,
   page,
   totalPages,
   loading,
   atualizarPagina
 } = usePagination<EstudoResponseInterface>(listarEstudosUsuarioPaginado, 6);
+
+const estudos = computed(() => {
+  const estudosDaPagina: EstudoResponseInterface[] = [];
+  
+  estudosPaginados.value.forEach(estudoPaginado => {
+    const estudoCompleto = todosEstudosMap.value.get(estudoPaginado.id);
+    if (estudoCompleto) {
+      estudosDaPagina.push(estudoCompleto);
+    } else {
+      estudosDaPagina.push(estudoPaginado);
+      todosEstudosMap.value.set(estudoPaginado.id, estudoPaginado);
+    }
+  });
+  
+  return estudosDaPagina;
+});
 
 const mudarPagina = async (novaPagina: number) => {
   await atualizarPagina(novaPagina - 1); 
@@ -40,21 +55,13 @@ const mudarPagina = async (novaPagina: number) => {
 
 async function carregarEstudos(pagina: number = page.value) {
   await atualizarPagina(pagina);
-  estado.value = estudos.value.length === 0 ? 'semEstudos' : 'visualizando';
-  atualizarEstudoMap();
-
+  
+  estudosPaginados.value.forEach(estudo => {
+    todosEstudosMap.value.set(estudo.id, estudo);
+  });
+  
+  estado.value = estudosPaginados.value.length === 0 ? 'semEstudos' : 'visualizando';
 }
-//
-const estudosMap = ref(new Map<number, EstudoResponseInterface>());
-
-function atualizarEstudoMap(){
-  if(estudos.value){
-    estudosMap.value.clear();
-    estudos.value.forEach(estudo => {
-      estudosMap.value.set(estudo.id, estudo);
-    });
-  }
-};
 
 const estudosOrdenados = computed(() => {
   return [...estudos.value].sort((a, b) => {
@@ -64,29 +71,13 @@ const estudosOrdenados = computed(() => {
   });
 });
 
-// async function carregarEstudos(){
-//   loading.value = true;
-//   try {
-//     estudos.value = await listarEstudosUsuario();
-
-//     estado.value = estudos.value.length === 0 ? 'semEstudos' : 'visualizando';
-//     atualizarEstudoMap();
-//   } catch (error) {
-//     console.error('Erro ao carregar estudos:', error);
-//     alert('Erro ao carregar estudos. Tente novamente.');
-//   }finally{
-//     loading.value = false;
-//   }
-// };
-
 async function salvarEstudo(estudo: EstudoInterface){
   loading.value = true;
   try {
     const estudoNovo = await criarEstudo(estudo);
 
-    estudos.value.push(estudoNovo);
-    estudosMap.value.set(estudoNovo.id, estudoNovo);
-
+    todosEstudosMap.value.set(estudoNovo.id, estudoNovo);
+    
     estado.value = 'visualizando';
     modalAddEstudo.value = false;
 
@@ -99,7 +90,6 @@ async function salvarEstudo(estudo: EstudoInterface){
   }
 };
 
-
 async function deletarEstudo(id: number){
   if (!confirm('Tem certeza que deseja excluir este estudo?')) {
     return;
@@ -110,8 +100,7 @@ async function deletarEstudo(id: number){
   const estudosBackup = [...estudos.value];
   
   try {
-    estudos.value = estudos.value.filter(estudo => estudo.id !== id);
-    estudosMap.value.delete(id);
+    todosEstudosMap.value.delete(id);
     
     await del(id);
     
@@ -120,8 +109,10 @@ async function deletarEstudo(id: number){
   } catch (error) {
     console.error('Erro ao deletar estudo:', error);
     
-    estudos.value = estudosBackup;
-    estado.value = estudosBackup.length === 0 ? 'semEstudos' : 'visualizando';
+    const estudoBackup = estudosBackup.find(e => e.id === id);
+    if (estudoBackup) {
+      todosEstudosMap.value.set(id, estudoBackup);
+    }
     
     alert('Erro ao deletar estudo. Tente novamente.');
   } finally {
@@ -165,22 +156,28 @@ async function salvarEdicaoEstudo(idEstudo: number){
 
   loading.value = true;
   try {
-    const targetEstudo = estudosMap.value.get(idEstudo);
-
+    const targetEstudo = todosEstudosMap.value.get(idEstudo);
+    
     if(targetEstudo){
-      targetEstudo.nomeDisciplina = textoEditando.value.nomeDisciplina.trim();
-      targetEstudo.tema = textoEditando.value.tema.trim();
-      targetEstudo.tempoDeEstudo = textoEditando.value.tempoDeEstudo;
-      targetEstudo.diaDoEstudo = textoEditando.value.diaDoEstudo;
-
+      const estudoAtualizado = {
+        ...targetEstudo,
+        nomeDisciplina: textoEditando.value.nomeDisciplina.trim(),
+        tema: textoEditando.value.tema.trim(),
+        tempoDeEstudo: textoEditando.value.tempoDeEstudo,
+        diaDoEstudo: textoEditando.value.diaDoEstudo,
+      };
+      
+      todosEstudosMap.value.set(idEstudo, estudoAtualizado);
+      
       await atualizarEstudo(idEstudo, {
         nomeDisciplina: textoEditando.value.nomeDisciplina.trim(),
         tema: textoEditando.value.tema.trim(),
         tempoDeEstudo: textoEditando.value.tempoDeEstudo,
         diaDoEstudo: textoEditando.value.diaDoEstudo,
       });
+      
       cancelarEdicao();
-      await carregarEstudos();
+      await carregarEstudos(); 
     }
   } catch (error) {
     console.error('Erro ao editar estudo:', error);
@@ -192,7 +189,7 @@ async function salvarEdicaoEstudo(idEstudo: number){
 };
 
 onMounted( async () => {
-  carregarEstudos(0);
+  await carregarEstudos(0);
 });
 </script>
 
@@ -252,20 +249,13 @@ onMounted( async () => {
       </v-card>
     </div>
 
-    <!-- VISUALIZANDO -->
     <div v-else-if="estado === 'visualizando'">
       <v-card variant="flat" elevation="2">
         <v-card-title class="d-flex justify-space-between align-center">
-          <!-- <span>Meus Estudos</span> -->
-          <!-- <div class="d-flex align-center gap-2">
-            <v-chip color="primary" variant="flat">
-              Estudo(s): {{ estudos.length }}
-            </v-chip>
-          </div> -->
+
         </v-card-title>
 
         <v-card-text>
-          <!-- COM ESTUDOS -->
           <v-table>
             <thead>
               <tr>
@@ -278,7 +268,6 @@ onMounted( async () => {
             </thead>
             <tbody>
               <tr v-for="estudo in estudosOrdenados" :key="estudo.id">
-                <!-- DISCIPLINA -->
                 <td>
                   <div v-if="editandoEstudoId === estudo.id" class="edit-container">
                     <v-text-field
@@ -298,7 +287,6 @@ onMounted( async () => {
                   </span>
                 </td>
 
-                <!-- TEMA -->
                 <td>
                   <div v-if="editandoEstudoId === estudo.id" class="edit-container">
                     <v-text-field
@@ -317,7 +305,6 @@ onMounted( async () => {
                   </span>
                 </td>
 
-                <!-- TEMPO -->
                 <td>
                   <div v-if="editandoEstudoId === estudo.id" class="edit-container">
                     <v-text-field
@@ -339,7 +326,6 @@ onMounted( async () => {
                   </v-chip>
                 </td>
 
-                <!-- DATA -->
                 <td>
                   <div v-if="editandoEstudoId === estudo.id" class="edit-container">
                     <DataInput
@@ -359,13 +345,12 @@ onMounted( async () => {
                   </span>
                 </td>
 
-                <!-- AÇÕES -->
                 <td>
                   <div class="d-flex align-center gap-1">
                     <!-- BOTÃO PARA CONCLUIR/FINALIZAR EDIÇÃO -->
                     <template v-if="editandoEstudoId === estudo.id">
                       <div>
-                        <v-btn
+                      <v-btn
                           icon
                           size="small"
                           variant="text"

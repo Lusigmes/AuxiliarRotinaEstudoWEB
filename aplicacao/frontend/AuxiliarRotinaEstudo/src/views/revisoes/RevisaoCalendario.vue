@@ -210,7 +210,7 @@ function verDetalhesDoModal(payload: { revisao: RevisaoResponseInterface, origem
       </v-card-text>
     </v-card>
 
-      <lista-revisoes
+      <ListaRevisoes
         :visivel="modalVisivel"
         :data="dataSelecionada"
         :revisoes="revisoesDoDia"
