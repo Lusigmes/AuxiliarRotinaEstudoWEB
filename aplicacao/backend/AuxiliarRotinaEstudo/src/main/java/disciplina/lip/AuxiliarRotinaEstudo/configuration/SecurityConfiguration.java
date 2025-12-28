@@ -38,6 +38,10 @@ public class SecurityConfiguration {
             .authorizeHttpRequests(auth -> auth
             .requestMatchers("/auth/registro", "/auth/login").permitAll()
             .requestMatchers("/estudos/**").hasAnyRole("ALUNO")
+            .requestMatchers("/cronogramas/**").hasAnyRole("ALUNO")
+            .requestMatchers("/relatorios/**").hasAnyRole("ALUNO")
+            .requestMatchers("/revisoes/**").hasAnyRole("ALUNO")
+            .requestMatchers("/itens/**").hasAnyRole("ALUNO")
             // .requestMatchers(HttpMethod.POST , "/usuarios").permitAll()
             // .requestMatchers("/usuarios/**").hasAnyRole("ADMIN")
             // .requestMatchers("/prestadores/**").hasAnyRole("USER", "ADMIN")

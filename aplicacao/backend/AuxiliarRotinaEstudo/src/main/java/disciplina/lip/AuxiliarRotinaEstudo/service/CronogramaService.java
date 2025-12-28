@@ -1,7 +1,9 @@
 package disciplina.lip.AuxiliarRotinaEstudo.service;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -15,6 +17,7 @@ import disciplina.lip.AuxiliarRotinaEstudo.dto.ItemCronogramaResponseDTO;
 import disciplina.lip.AuxiliarRotinaEstudo.model.entity.Cronograma;
 import disciplina.lip.AuxiliarRotinaEstudo.model.entity.ItemCronogramaDiario;
 import disciplina.lip.AuxiliarRotinaEstudo.model.entity.Usuario;
+import disciplina.lip.AuxiliarRotinaEstudo.model.enums.DiaSemana;
 import disciplina.lip.AuxiliarRotinaEstudo.repository.CronogramaRepository;
 import disciplina.lip.AuxiliarRotinaEstudo.repository.ItemCronogramaDiarioRepository;
 
@@ -26,7 +29,6 @@ public class CronogramaService {
 
     @Autowired
     private ItemCronogramaDiarioRepository itemCronogramaDiarioRepository;
-
 
     @Transactional
     public Cronograma salvar(CronogramaDTO dto, Usuario usuario){
@@ -41,13 +43,22 @@ public class CronogramaService {
 
         Cronograma cronogramaSalvo =  cronogramaRepository.save(novoCronograma);
         
+        Map<DiaSemana, Integer> contadorOrdem = new HashMap<>();
+        
         for(ItemCronogramaDTO dtoItem : dto.itensDoDia()){
-           
+        
             ItemCronogramaDiario item = new ItemCronogramaDiario();
             item.setDiaSemana(dtoItem.diaSemana());
             item.setNomeDisciplina(dtoItem.nomeDisciplina());
             item.setCronograma(cronogramaSalvo);
             
+            if (dtoItem.ordem() != null) {
+                item.setOrdem(dtoItem.ordem());
+            } else {
+                int ordemAtual = contadorOrdem.getOrDefault(dtoItem.diaSemana(), 0);
+                item.setOrdem(ordemAtual);
+                contadorOrdem.put(dtoItem.diaSemana(), ordemAtual + 1);
+            }
             
             ItemCronogramaDiario itemSalvo = itemCronogramaDiarioRepository.save(item);
             cronogramaSalvo.getItemDoDia().add(itemSalvo);
@@ -58,7 +69,7 @@ public class CronogramaService {
 
     @Transactional
     public Cronograma adicionarItensNoCronograma(Long idCronograma, List<ItemCronogramaDTO> novos_dtos, Usuario usuario){
-        Cronograma  cronograma = cronogramaRepository.findByIdCronograma(idCronograma);
+        Cronograma cronograma = cronogramaRepository.findByIdCronograma(idCronograma);
 
         if(cronograma == null ){
             throw new IllegalArgumentException("Cronograma não encontrado com ID: " + idCronograma);
@@ -68,13 +79,27 @@ public class CronogramaService {
             throw new SecurityException("Acesso negado");
         }
 
+        Map<DiaSemana, Integer> contadorItensPorDia = new HashMap<>();
+        
+        for (ItemCronogramaDiario itemExistente : cronograma.getItemDoDia()) {
+            DiaSemana dia = itemExistente.getDiaSemana();
+            contadorItensPorDia.put(dia, contadorItensPorDia.getOrDefault(dia, 0) + 1);
+        }
+
         for(ItemCronogramaDTO dtoItem : novos_dtos){
-           
             ItemCronogramaDiario item = new ItemCronogramaDiario();
             item.setDiaSemana(dtoItem.diaSemana());
             item.setNomeDisciplina(dtoItem.nomeDisciplina());
             item.setCronograma(cronograma);
             
+            if (dtoItem.ordem() != null) {
+                item.setOrdem(dtoItem.ordem());
+            } else {
+                DiaSemana dia = dtoItem.diaSemana();
+                int ordemAtual = contadorItensPorDia.getOrDefault(dia, 0);
+                item.setOrdem(ordemAtual);
+                contadorItensPorDia.put(dia, ordemAtual + 1);
+            }
             
             ItemCronogramaDiario itemSalvo = itemCronogramaDiarioRepository.save(item);
             cronograma.getItemDoDia().add(itemSalvo);
@@ -83,10 +108,9 @@ public class CronogramaService {
         return cronogramaRepository.save(cronograma);
     }
    
-    /* VERIFICAR SITUAÇÃO: QUANDO O USUARIO FOR EDITAR UM CRONOGRAMA CRIAD, OS ITENS CRIADOS ANTES DA EDIÇÃO PERMANECEM OU SÃO EXCLUIDOS? */
     @Transactional
-    public Cronograma atualizar(CronogramaDTO dto, Usuario usuariao){
-        Cronograma cronograma = cronogramaRepository.findByUsuarioId(usuariao.getId());
+    public Cronograma atualizar(CronogramaDTO dto, Usuario usuario){
+        Cronograma cronograma = cronogramaRepository.findByUsuarioId(usuario.getId());
 
         if(cronograma == null){
             throw new IllegalStateException("Cronograma não encontrado");
@@ -95,6 +119,8 @@ public class CronogramaService {
         itemCronogramaDiarioRepository.deleteAll(cronograma.getItemDoDia());
         cronograma.getItemDoDia().clear();
 
+        Map<DiaSemana, Integer> contadorOrdem = new HashMap<>();
+        
         for(ItemCronogramaDTO dtoItem : dto.itensDoDia()){
                 
             ItemCronogramaDiario item = new ItemCronogramaDiario();
@@ -102,14 +128,20 @@ public class CronogramaService {
             item.setNomeDisciplina(dtoItem.nomeDisciplina());
             item.setCronograma(cronograma);
             
+            if (dtoItem.ordem() != null) {
+                item.setOrdem(dtoItem.ordem());
+            } else {
+                int ordemAtual = contadorOrdem.getOrDefault(dtoItem.diaSemana(), 0);
+                item.setOrdem(ordemAtual);
+                contadorOrdem.put(dtoItem.diaSemana(), ordemAtual + 1);
+            }
             
-            ItemCronogramaDiario itemSalavo = itemCronogramaDiarioRepository.save(item);
-            cronograma.getItemDoDia().add(itemSalavo);
+            ItemCronogramaDiario itemSalvo = itemCronogramaDiarioRepository.save(item);
+            cronograma.getItemDoDia().add(itemSalvo);
         }
 
         return cronogramaRepository.save(cronograma);
     }
-
     public Cronograma buscarCronogramaDoUsuario(Usuario usuario){
         return cronogramaRepository.findCronogramaByUsuario(usuario);
     }
@@ -123,7 +155,8 @@ public class CronogramaService {
             .map(item -> new ItemCronogramaResponseDTO(
                 item.getId(),
                 item.getDiaSemana(),
-                item.getNomeDisciplina()
+                item.getNomeDisciplina(),
+                item.getOrdem()
             )).collect(Collectors.toList());
             return new CronogramaResponseDTO(
                 cronograma.getId(),

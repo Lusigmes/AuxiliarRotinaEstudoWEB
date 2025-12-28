@@ -140,15 +140,15 @@
           </v-col>
         </v-row>
         
-        <div v-if="resumo && resumo.periodoInicio" class="mt-3 d-flex align-center">
-          <v-chip color="primary" variant="tonal" size="small" class="mr-2">
-            <v-icon size="small" start>mdi-calendar</v-icon>
-            Período Ativo
-          </v-chip>
-          <span class="text-body-2">
-            {{ formatarDataDisplay(resumo.periodoInicio) }} - {{ formatarDataDisplay(resumo.periodoFim) }}
-          </span>
-        </div>
+      <div v-if="resumo && resumo.periodoInicio" class="mt-3 d-flex align-center">
+        <v-chip color="primary" variant="tonal" size="small" class="mr-2">
+          <v-icon size="small" start>mdi-calendar</v-icon>
+          Período Ativo
+        </v-chip>
+        <span class="text-body-2">
+          {{ formatarDataParaDisplay(resumo.periodoInicio) }} - {{ formatarDataParaDisplay(resumo.periodoFim) }}
+        </span>
+      </div>
       </v-card-text>
     </v-card>
 
@@ -234,14 +234,14 @@
 
     <div v-if="!loading" class="charts-section">
     
-      <v-row class="mb-6">
+      <v-row class="mb-6 align-stretch">
         <!-- gráfico -->
         <v-col cols="12" md="8">
           <v-card class="chart-card" elevation="2">
             <v-card-title class="pa-4">
               <div class="d-flex align-center">
                 <v-icon color="purple" class="mr-2">mdi-chart-donut</v-icon>
-                <span class="text-h6">Distribuição de Disciplina por Estudo</span>
+                <span class="text-h6">Distribuição por Disciplina</span>
               </div>
               <v-spacer />
               <v-chip size="small" variant="tonal" color="purple">
@@ -324,7 +324,7 @@
               </div>
               <v-spacer />
               <span class="text-caption text-medium-emphasis">
-                Total de Dias Estudados: {{ estudosDiario?.length || 0 }}
+                Dias Estudados: {{ estudosDiario?.length || 0 }}
               </span>
             </v-card-title>
             <v-divider />
@@ -335,7 +335,7 @@
                     <div v-for="dia in estudosDiario.slice(0, 1000)" :key="dia.data" class="estudo-dia-item">
                       <div class="estudo-dia-content">
                         <div class="estudo-dia-header">
-                          <div class="estudo-dia-data">{{ formatarDataDisplay(dia.data || '') }}</div>
+                          <div class="estudo-dia-data">{{ formatarDataParaDisplay(dia.data || '') }}</div>
                           <v-chip color="orange" variant="tonal" size="x-small" density="compact">
                             {{ dia.quantidadeEstudos || 0 }} estudos
                           </v-chip>
@@ -359,132 +359,124 @@
       </v-row>
 
       <!-- tabela  -->
-     <v-card v-if="estatisticasDisciplinas && estatisticasDisciplinas.length > 0" class="mb-6" elevation="2">
-  <v-card-title class="pa-4 d-flex align-center justify-space-between">
-    <div class="d-flex align-center">
-      <v-icon color="deep-purple" class="mr-2">mdi-table</v-icon>
-      <span class="text-h6">Visão Geral </span>
-      <v-chip size="small" class="ml-3" color="primary" variant="tonal">
-        {{ estatisticasDisciplinas.length }} disciplinas
-      </v-chip>
-    </div>
+      <v-card v-if="estatisticasDisciplinas && estatisticasDisciplinas.length > 0" class="mb-6" elevation="2">
+        <v-card-title class="pa-4 d-flex align-center justify-space-between">
+          <div class="d-flex align-center">
+            <v-icon color="deep-purple" class="mr-2">mdi-table</v-icon>
+            <span class="text-h6">Visão Geral das Disciplinas</span>
+          </div>
 
-    <div class="d-flex align-center">
-      <v-btn
-        color="secondary"
-        variant="tonal"
-        size="small"
-        prepend-icon="mdi-table-arrow-down"
-        @click="exportarTabela"
-        :loading="exportandoTabela"
-        :disabled="loading || estatisticasDisciplinas.length === 0"
-        class="mr-2"
-      >
-        Exportar Tabela
-      </v-btn>
-      
-      <v-btn
-        variant="tonal"
-        size="small"
-        @click="expandirTabela = !expandirTabela"
-        :prepend-icon="expandirTabela ? 'mdi-chevron-up' : 'mdi-chevron-down'"
-        color="deep-purple"
-      >
-        {{ expandirTabela ? 'Recolher' : 'Expandir' }}
-      </v-btn>
+          <div class="d-flex align-center">
+            <v-btn
+              color="secondary"
+              variant="tonal"
+              size="small"
+              prepend-icon="mdi-table-arrow-down"
+              @click="exportarTabela"
+              :loading="exportandoTabela"
+              :disabled="loading || estatisticasDisciplinas.length === 0"
+              class="mr-2"
+            >
+              Exportar Tabela
+            </v-btn>
+            
+            <v-btn
+              variant="tonal"
+              size="small"
+              @click="expandirTabela = !expandirTabela"
+              :prepend-icon="expandirTabela ? 'mdi-chevron-up' : 'mdi-chevron-down'"
+              color="deep-purple"
+            >
+              {{ expandirTabela ? 'Recolher' : 'Expandir' }}
+            </v-btn>
+          </div>
+        </v-card-title>
+        
+        <v-expand-transition>
+          <div v-show="expandirTabela">
+            <v-divider />
+            <div class="table-responsive">
+              <v-table density="comfortable" hover>
+                <thead class="table-header">
+                  <tr>
+                    <th class="text-left">
+                      <v-icon size="small" class="mr-1">mdi-book</v-icon>
+                      Disciplina
+                    </th>
+                    <th class="text-center">
+                      <v-icon size="small" class="mr-1">mdi-counter</v-icon>
+                      Estudos
+                    </th>
+                    <th class="text-center">
+                      <v-icon size="small" class="mr-1">mdi-clock</v-icon>
+                      Tempo Total
+                    </th>
+                    <th class="text-center">
+                      <v-icon size="small" class="mr-1">mdi-chart-bar</v-icon>
+                      Média/Estudo
+                    </th>
+                    <th class="text-center">
+                      <v-icon size="small" class="mr-1">mdi-check</v-icon>
+                      Revisões
+                    </th>
+                    <th class="text-center">
+                      <v-icon size="small" class="mr-1">mdi-percent</v-icon>
+                      Tempo
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr v-for="disciplina in estatisticasDisciplinas" :key="disciplina.disciplina">
+                    <td class="font-weight-bold">
+                     <strong> {{ disciplina.disciplina }}</strong>
+                    </td>
+                    <td class="text-center">
+                      <v-chip size="small" variant="tonal" color="primary">
+                        {{ disciplina.totalEstudos || 0 }}
+                      </v-chip>
+                    </td>
+                    <td class="text-center font-weight-bold">
+                      {{ disciplina.totalTempo || 0 }}h
+                    </td>
+                    <td class="text-center">
+                      {{ (disciplina.mediaTempoEstudo || 0).toFixed(1) }}h
+                    </td>
+                    <td class="text-center">
+                      <v-chip :color="(disciplina.totalRevisoesConcluidas || 0) > 0 ? 'success' : 'grey'" 
+                              variant="flat" 
+                              size="small">
+                        {{ disciplina.totalRevisoesConcluidas || 0 }}
+                      </v-chip>
+                    </td>
+                    <td class="text-center">
+                      <div class="percent-cell">
+                        <v-progress-linear
+                          :model-value="calcularPercentualTempo(disciplina.totalTempo || 0)"
+                          :color="calcularCorPercentual(disciplina.totalTempo || 0)"
+                          height="8"
+                          rounded
+                          class="mb-1"
+                        />
+                        <div class="text-caption font-weight-medium">
+                          {{ formatarPercentual(calcularPercentualTempo(disciplina.totalTempo || 0)) }}
+                        </div>
+                      </div>
+                    </td>
+                  </tr>
+                </tbody>
+              </v-table>
+            </div>
+          </div>
+        </v-expand-transition>
+      </v-card>
     </div>
-  </v-card-title>
-  
-  <v-expand-transition>
-    <div v-show="expandirTabela">
-      <v-divider />
-      
-      <!-- Tabela com scroll limitada a 5 itens -->
-      <div class="table-container-wrapper">
-        <div class="table-scrollable">
-          <v-table density="comfortable" hover class="scrollable-table">
-            <thead class="table-header fixed-header">
-              <tr>
-                <th class="text-left" style="min-width: 180px;">
-                  <v-icon size="small" class="mr-1">mdi-book</v-icon>
-                  Disciplina
-                </th>
-                <th class="text-center" style="min-width: 100px;">
-                  <v-icon size="small" class="mr-1">mdi-counter</v-icon>
-                  Estudos
-                </th>
-                <th class="text-center" style="min-width: 100px;">
-                  <v-icon size="small" class="mr-1">mdi-clock</v-icon>
-                  Tempo Total
-                </th>
-                <th class="text-center" style="min-width: 120px;">
-                  <v-icon size="small" class="mr-1">mdi-chart-bar</v-icon>
-                  Média/Estudo
-                </th>
-                <th class="text-center" style="min-width: 100px;">
-                  <v-icon size="small" class="mr-1">mdi-check</v-icon>
-                  Revisões
-                </th>
-                <th class="text-center" style="min-width: 140px;">
-                  <v-icon size="small" class="mr-1">mdi-percent</v-icon>
-                  Tempo
-                </th>
-              </tr>
-            </thead>
-            <tbody class="scrollable-body">
-              <!-- Mostra apenas os primeiros 50 itens (você pode ajustar conforme necessário) -->
-              <tr v-for="disciplina in estatisticasDisciplinas.slice(0, 50)" :key="disciplina.disciplina">
-                <td class="font-weight-bold" style="min-width: 180px;">
-                  <strong> {{ disciplina.disciplina }}</strong>
-                </td>
-                <td class="text-center" style="min-width: 100px;">
-                  <v-chip size="small" variant="tonal" color="primary">
-                    {{ disciplina.totalEstudos || 0 }}
-                  </v-chip>
-                </td>
-                <td class="text-center font-weight-bold" style="min-width: 100px;">
-                  {{ disciplina.totalTempo || 0 }}h
-                </td>
-                <td class="text-center" style="min-width: 120px;">
-                  {{ (disciplina.mediaTempoEstudo || 0).toFixed(1) }}h
-                </td>
-                <td class="text-center" style="min-width: 100px;">
-                  <v-chip :color="(disciplina.totalRevisoesConcluidas || 0) > 0 ? 'success' : 'grey'" 
-                          variant="flat" 
-                          size="small">
-                    {{ disciplina.totalRevisoesConcluidas || 0 }}
-                  </v-chip>
-                </td>
-                <td class="text-center" style="min-width: 140px;">
-                  <div class="percent-cell">
-                    <v-progress-linear
-                      :model-value="calcularPercentualTempo(disciplina.totalTempo || 0)"
-                      :color="calcularCorPercentual(disciplina.totalTempo || 0)"
-                      height="8"
-                      rounded
-                      class="mb-1"
-                    />
-                    <div class="text-caption font-weight-medium">
-                      {{ formatarPercentual(calcularPercentualTempo(disciplina.totalTempo || 0)) }}
-                    </div>
-                  </div>
-                </td>
-              </tr>
-            </tbody>
-          </v-table>
-        </div>
-      </div>
-    </div>
-  </v-expand-transition>
-</v-card>
-    </div>
-
+<!-- apos aqui edição  sss -->
     <v-card v-if="!loading" class="mt-6" variant="flat" color="primary-lighten-5">
       <v-card-text class="pa-4 text-center">
         <div class="d-flex align-center justify-center gap-4">
           <v-icon color="primary">mdi-information</v-icon>
           <span class="text-body-2">
-            Dados atualizados em tempo real • Última atualização: {{ formatarDataAtual() }}
+            Dados atualizados em tempo real • Última atualização: {{ getDataHoraAtualFormatada() }}
           </span>
           <v-btn
             variant="text"
@@ -501,7 +493,6 @@
     </v-card>
   </v-container>
 </template>
-
 <script setup lang="ts">
 import { ref, onMounted, watch, nextTick, onBeforeUnmount, computed } from 'vue';
 import Chart from 'chart.js/auto';
@@ -521,8 +512,12 @@ import type {
   RevisaoStatusInterface,
   DashboardInterface 
 } from '@/types';
-import { validarFormatoData } from '@/utils/dateUtils';
-import { exportarPdfRelatorio } from '@/utils/pdfExportService';
+import { 
+  validarFormatoData,
+  formatarDataParaDisplay,
+  getDataHoraAtualFormatada,
+} from '@/utils/dateUtils';
+import { exportarPdfRelatorio } from '@/utils/pdfRelatorioExportService';
 
 const router = useRouter();
 
@@ -575,25 +570,6 @@ const validarData = (value: string) => {
   return validarFormatoData(value) || 'Data inválida. Use DD/MM/AAAA';
 };
 
-const formatarDataDisplay = (data: string) => {
-  if (!data) return '';
-  if (data.includes('-')) {
-    const [ano, mes, dia] = data.split('-');
-    return `${dia}/${mes}/${ano}`;
-  }
-  return data;
-};
-
-const formatarDataAtual = () => {
-  return new Date().toLocaleDateString('pt-BR', {
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit'
-  });
-};
-
 const calcularPercentualTempo = (tempoDisciplina: number): number => {
   const total = resumo.value?.tempoTotal ?? calcularTotalTempo();
   if (!total || total === 0) return 0;
@@ -635,7 +611,6 @@ async function exportarPDF() {
   exportando.value = true;
   
   try {
-
     await exportarPdfRelatorio.generatePDF({
       resumo: resumo.value,
       estatisticasDisciplinas: estatisticasDisciplinas.value,
@@ -859,7 +834,6 @@ onBeforeUnmount(() => {
   destruirGrafico();
 });
 </script>
-
 <style scoped>
 .status-header {
   background: white;
@@ -989,13 +963,16 @@ onBeforeUnmount(() => {
   margin-bottom: 0.5rem;
 }
 
-.chart-card,
-.ranking-card,
-.timeline-card {
+  .chart-card,
+  .ranking-card,
+  .timeline-card {
   border-radius: 12px;
   overflow: hidden;
   transition: transform 0.3s ease;
   border: 1px solid #e0e0e0;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
 }
 
 .chart-card:hover,
@@ -1006,8 +983,20 @@ onBeforeUnmount(() => {
 }
 
 .chart-container-wrapper {
-  height: 350px;
+  flex: 1;
+  min-height: 350px;
   position: relative;
+  display: flex;
+  flex-direction: column;
+}
+
+.align-stretch > .v-col {
+  display: flex;
+}
+
+.ranking-card .v-card-text {
+  flex: 1;
+  overflow: auto;
 }
 
 .chart-container-full {
@@ -1128,8 +1117,22 @@ onBeforeUnmount(() => {
   color: #475569;
 }
 
-.table-responsive {
+  .table-responsive {
   overflow-x: auto;
+  overflow-y: auto;
+  max-height: calc(56px * 5 + 56px);
+}
+
+.table-responsive table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.table-responsive thead th {
+  position: sticky;
+  top: 0;
+  background: #f8fafc;
+  z-index: 3;
 }
 
 .percent-cell {
@@ -1299,88 +1302,5 @@ onBeforeUnmount(() => {
 
 .table-responsive::-webkit-scrollbar-thumb:hover {
   background: #a8a8a8;
-}
-
-.table-container-wrapper {
-  position: relative;
-  border-radius: 0 0 12px 12px;
-  overflow: hidden;
-}
-
-.table-scrollable {
-  max-height: 400px; 
-  overflow-x: hidden;
-  position: relative;
-}
-
-/* Cabeçalho fixo */
-.fixed-header {
-  position: sticky;
-  top: 0;
-  z-index: 10;
-  background-color: #f8fafc;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-}
-
-.scrollable-body {
-  max-height: calc(400px - 60px); /* Altura total menos cabeçalho */
-  overflow-y: auto;
-}
-
-/* Estilização da barra de scroll */
-.table-scrollable::-webkit-scrollbar {
-  width: 8px;
-}
-
-.table-scrollable::-webkit-scrollbar-track {
-  background: #f1f1f1;
-  border-radius: 4px;
-}
-
-.table-scrollable::-webkit-scrollbar-thumb {
-  background: #c5c5c5;
-  border-radius: 4px;
-}
-
-.table-scrollable::-webkit-scrollbar-thumb:hover {
-  background: #a8a8a8;
-}
-
-/* Alternar cores das linhas para melhor visualização */
-.scrollable-table tbody tr:nth-of-type(odd) {
-  background-color: #fafafa;
-}
-
-.scrollable-table tbody tr:hover {
-  background-color: #f0f0f0;
-}
-
-/* Ajuste para linhas da tabela */
-.scrollable-table tbody tr {
-  height: 56px; /* Altura fixa para cada linha */
-}
-
-.table-footer {
-  background-color: #f5f5f5;
-  border-top: 1px solid #e0e0e0;
-}
-
-/* Estilo para garantir que o conteúdo não ultrapasse os limites */
-.scrollable-table td,
-.scrollable-table th {
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-/* Responsividade */
-@media (max-width: 768px) {
-  .table-scrollable {
-    max-height: 350px;
-  }
-  
-  .scrollable-body {
-    max-height: calc(350px - 60px);
-  }
 }
 </style>

@@ -1,3 +1,49 @@
+<script setup lang="ts">
+import { ref } from 'vue';
+import { DiasSemana } from '@/types/enums';
+import type { ItemCronogramaInterface, ModoAdicao } from '@/types';
+
+const props = defineProps<{
+  modoAdicao: ModoAdicao;
+  itensTemporarios: ItemCronogramaInterface[];
+}>();
+
+const emits = defineEmits(['adicionar-item', 'remover-item', 'cancelar', 'finalizar']);
+
+const novoItem = ref<ItemCronogramaInterface>({ nomeDisciplina: '', diaSemana: DiasSemana.SEGUNDA });
+
+const diasOptions = [
+  { title: 'Segunda-feira', value: DiasSemana.SEGUNDA },
+  { title: 'Terça-feira', value: DiasSemana.TERCA },
+  { title: 'Quarta-feira', value: DiasSemana.QUARTA },
+  { title: 'Quinta-feira', value: DiasSemana.QUINTA },
+  { title: 'Sexta-feira', value: DiasSemana.SEXTA },
+  { title: 'Sábado', value: DiasSemana.SABADO },
+  { title: 'Domingo', value: DiasSemana.DOMINGO }
+];
+
+function formatarDiaSemana(dia: DiasSemana) {
+  const encontrado = diasOptions.find(d => d.value === dia);
+  return encontrado?.title || dia;
+}
+
+function emitirAdicionarItem() {
+  if (!novoItem.value.nomeDisciplina) return;
+  
+  const itensNoMesmoDia = props.itensTemporarios.filter(
+    item => item.diaSemana === novoItem.value.diaSemana
+  );
+  
+  const itemComOrdem = {
+    ...novoItem.value,
+    ordem: itensNoMesmoDia.length  
+  };
+  
+  emits('adicionar-item', itemComOrdem);
+  novoItem.value = { nomeDisciplina: '', diaSemana: DiasSemana.SEGUNDA };
+}
+</script>
+
 <template>
   <v-card variant="flat" elevation="2">
     <v-card-item>
@@ -63,41 +109,6 @@
   </v-card>
 </template>
 
-<script setup lang="ts">
-import { ref } from 'vue';
-import { DiasSemana } from '@/types/enums';
-import type { ItemCronogramaInterface, ModoAdicao } from '@/types';
-
-const props = defineProps<{
-  modoAdicao: ModoAdicao;
-  itensTemporarios: ItemCronogramaInterface[];
-}>();
-
-const emits = defineEmits(['adicionar-item', 'remover-item', 'cancelar', 'finalizar']);
-
-const novoItem = ref<ItemCronogramaInterface>({ nomeDisciplina: '', diaSemana: DiasSemana.SEGUNDA });
-
-const diasOptions = [
-  { title: 'Segunda-feira', value: DiasSemana.SEGUNDA },
-  { title: 'Terça-feira', value: DiasSemana.TERCA },
-  { title: 'Quarta-feira', value: DiasSemana.QUARTA },
-  { title: 'Quinta-feira', value: DiasSemana.QUINTA },
-  { title: 'Sexta-feira', value: DiasSemana.SEXTA },
-  { title: 'Sábado', value: DiasSemana.SABADO },
-  { title: 'Domingo', value: DiasSemana.DOMINGO }
-];
-
-function formatarDiaSemana(dia: DiasSemana) {
-  const encontrado = diasOptions.find(d => d.value === dia);
-  return encontrado?.title || dia;
-}
-
-function emitirAdicionarItem() {
-  if (!novoItem.value.nomeDisciplina) return;
-  emits('adicionar-item', { ...novoItem.value });
-  novoItem.value = { nomeDisciplina: '', diaSemana: DiasSemana.SEGUNDA };
-}
-</script>
 
 <style scoped>
 .gap-4 { gap: 16px; }

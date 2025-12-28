@@ -7,9 +7,9 @@ import jakarta.validation.constraints.NotNull;
 public record ItemCronogramaDTO(
     @NotNull
     DiaSemana diaSemana,
-    
     @NotBlank
-    String nomeDisciplina
+    String nomeDisciplina,
+    Integer ordem
 ) {
 
 }

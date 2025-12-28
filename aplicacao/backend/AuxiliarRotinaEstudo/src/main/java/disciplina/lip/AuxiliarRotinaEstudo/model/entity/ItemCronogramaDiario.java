@@ -35,6 +35,9 @@ public class ItemCronogramaDiario {
     
     @Column(nullable=false)
     private String nomeDisciplina;
+
+    @Column(nullable = false)
+    private Integer ordem;
     
     @ManyToOne
     @JoinColumn(name="cronograma_id")

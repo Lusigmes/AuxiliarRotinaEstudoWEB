@@ -83,3 +83,41 @@ export const formatarDataParaExibicao = (
     return formatted.replace(/^^\p{L}/u, c => c.toUpperCase());
 };
 
+
+export const formatarDataParaDisplay = (data: string | Date | null): string => {
+  if (!data) return '';
+  
+  let dataObj: Date;
+  
+  if (typeof data === 'string') {
+    if (validarFormatoData(data)) {
+      return data;
+    }
+    
+    if (data.includes('-')) {
+      const [ano, mes, dia] = data.split('-').map(Number) as [number, number, number];
+      return `${String(dia).padStart(2, '0')}/${String(mes).padStart(2, '0')}/${ano}`;
+    }
+    
+    dataObj = new Date(data);
+    if (isNaN(dataObj.getTime())) return data;
+  } else {
+    dataObj = data;
+  }
+  
+  const dia = String(dataObj.getDate()).padStart(2, '0');
+  const mes = String(dataObj.getMonth() + 1).padStart(2, '0');
+  const ano = String(dataObj.getFullYear());
+  return `${dia}/${mes}/${ano}`;
+};
+
+export const getDataHoraAtualFormatada = (): string => {
+  const agora = new Date();
+  return agora.toLocaleDateString('pt-BR', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit'
+  });
+};

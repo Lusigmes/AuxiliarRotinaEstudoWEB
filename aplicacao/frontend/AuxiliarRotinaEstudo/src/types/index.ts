@@ -30,13 +30,14 @@ export interface LoginTokenResponseInterface{
 export interface ItemCronogramaInterface{
     diaSemana:DiasSemana;
     nomeDisciplina: string;
+    ordem?: number;
 }
 
 export interface ItemCronogramaResponseInterface{
     id: number;
     diaSemana:DiasSemana;
     nomeDisciplina: string;
-    // ordem?: number;
+    ordem?: number;
 }
     
 export interface CronogramaInterface{ // usa para criar cronograma e adicionar itens
