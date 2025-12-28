@@ -66,7 +66,25 @@
         </v-card>
       </v-col>
 
-      
+      <v-col cols="12" sm="6" md="3">
+        <v-card 
+          class="dashboard-card" 
+          variant="flat" 
+          color="purple-lighten-5"
+          @click="navigateTo('relatorio')"
+        >
+          <v-card-item>
+            <template #prepend>
+              <v-avatar color="purple" variant="tonal" size="48">
+                <v-icon icon="mdi-chart-bar" />
+              </v-avatar>
+            </template>
+            
+            <v-card-title class="text-h6">Relatórios</v-card-title>
+            <v-card-subtitle>Analise seu desempenho</v-card-subtitle>
+          </v-card-item>
+        </v-card>
+      </v-col>
     </v-row>
 
 

@@ -1,8 +1,7 @@
 <script setup lang="ts">
 import { nomeDisciplinaDoEstudo } from '@/api/EstudoService';
-import { useRevisaoStore } from '@/stores/revisaoStore';
 import type { RevisaoResponseInterface } from '@/types';
-import { computed, ref, watch } from 'vue';
+import { ref, watch } from 'vue';
 
 const props = defineProps<{
   revisao: RevisaoResponseInterface | null;
@@ -14,15 +13,7 @@ const emit = defineEmits<{
   (e: 'fechar'): void;
 }>();
 
-const revisaoStore = useRevisaoStore();
-const loading = ref(false);
 const nomeDisciplina = ref<string>(''); 
-
-
-const mostrarBotaoConcluir = computed(() => {
-  return props.revisao && !props.revisao?.concluida && !props.origemLista;
-});
-
 
 watch(() => props.revisao, async (newVal) => {
   if (newVal?.idEstudo) {
@@ -36,26 +27,11 @@ watch(() => props.revisao, async (newVal) => {
   }
 }, { immediate: true });
 
-async function concluir() {
-  if(!props.revisao) return;
-  loading.value = true;
-  try{
-    const revisaoConcluida = await revisaoStore.concluirRevisao(props.revisao.id);
-    emit('atualizar', revisaoConcluida);
-    emit('fechar');
-  }catch (error) {
-    console.error('Erro ao concluir revisão:', error);
-    alert('Erro ao concluir revisão');
-  } finally {
-    loading.value = false;
-  }
-};
-
-
 function fecharModal() {
   emit('fechar');
 }
 </script>
+
 <template>
   <v-dialog :model-value="!!revisao" max-width="600px" @update:model-value="!$event && fecharModal()">
     <v-card v-if="revisao">
@@ -97,14 +73,6 @@ function fecharModal() {
           </v-list-item>
         </v-list>
       </v-card-text>
-
-      <v-card-actions v-if="mostrarBotaoConcluir">
-        <v-spacer />
-        <v-btn color="success" @click="concluir" :loading="loading">
-          <v-icon icon="mdi-check" class="mr-2" />
-          Concluir
-        </v-btn>
-      </v-card-actions>
     </v-card>
   </v-dialog>
 </template>

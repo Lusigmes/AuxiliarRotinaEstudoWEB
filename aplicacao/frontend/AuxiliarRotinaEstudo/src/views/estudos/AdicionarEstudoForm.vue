@@ -112,7 +112,7 @@ const salvarEstudo = async () => {
       <v-card-subtitle>Preencha os dados do estudo</v-card-subtitle>
 
       <template #append>
-        <v-btn icon @click="$emit('cancelar')">
+        <v-btn icon @click="$emit('cancelar')" elevation="0">
           <v-icon>mdi-close</v-icon>
         </v-btn>
       </template>
@@ -175,6 +175,7 @@ const salvarEstudo = async () => {
           </v-btn>
           <v-btn
             color="primary"
+            variant="tonal"
             type="submit"
             :loading="props.loading"
           >

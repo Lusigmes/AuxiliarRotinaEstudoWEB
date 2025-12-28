@@ -79,8 +79,41 @@ export interface RevisaoResponseInterface{
     idEstudo: number;
 }   
 
+export interface RelatorioResumoInterface {
+  periodoInicio: string;
+  periodoFim: string;  
+  totalEstudos: number;
+  totalRevisoesConcluidas: number;
+  totalRevisoesPendentes: number;
+  totalRevisoesAtrasadas: number;
+  mediaTempoDiario: number;
+  disciplinaMaisEstudada: string;
+  tempoTotal: number;
+}
 
-    // public record RevisaoUpdateDTO(
-    // @JsonFormat(pattern = "dd/MM/yyyy")
-    // LocalDate dataRevisao
 
+
+export interface EstatisticaDisciplinaInterface {
+  disciplina: string;
+  totalEstudos: number;
+  totalTempo: number;
+  mediaTempoEstudo: number;
+  totalRevisoesConcluidas: number;
+}
+
+export interface EstudoDiarioInterface {
+  data: string; 
+  quantidadeEstudos: number;
+  tempoTotal: number;
+}
+
+export interface RevisaoStatusInterface {
+  status: string;
+  quantidade: number;
+}
+
+export interface DashboardInterface {
+  resumo: RelatorioResumoInterface;
+  statusRevisoes: RevisaoStatusInterface[];
+  topDisciplinas: EstatisticaDisciplinaInterface[];
+}

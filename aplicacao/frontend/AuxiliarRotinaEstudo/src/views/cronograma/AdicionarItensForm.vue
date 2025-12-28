@@ -55,7 +55,7 @@
         <v-btn variant="outlined" color="grey" @click="$emit('cancelar')">
           <v-icon icon="mdi-close" class="mr-2" /> Cancelar
         </v-btn>
-        <v-btn color="primary" :disabled="props.itensTemporarios.length === 0" @click="$emit('finalizar')">
+        <v-btn color="primary" variant="tonal" :disabled="props.itensTemporarios.length === 0" @click="$emit('finalizar')">
           <v-icon icon="mdi-check" class="mr-2" /> {{ props.modoAdicao === 'criar' ? 'Criar Cronograma' : 'Adicionar Itens' }}
         </v-btn>
       </div>

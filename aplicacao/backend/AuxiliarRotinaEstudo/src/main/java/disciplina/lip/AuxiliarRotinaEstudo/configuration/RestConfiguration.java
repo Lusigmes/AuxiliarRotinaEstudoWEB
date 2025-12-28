@@ -8,6 +8,7 @@ import org.springframework.web.servlet.config.annotation.CorsRegistry;
 import org.springframework.web.servlet.config.annotation.EnableWebMvc;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
+import disciplina.lip.AuxiliarRotinaEstudo.repository.RelatorioRepository;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.EntityManagerFactory;
 import jakarta.persistence.metamodel.Type;
@@ -21,13 +22,13 @@ public class RestConfiguration implements RepositoryRestConfigurer, WebMvcConfig
 
     @Override
     public void configureRepositoryRestConfiguration(RepositoryRestConfiguration config, CorsRegistry cors) {
-        config.disableDefaultExposure(); // Desativa a exposição padrão
+        config.disableDefaultExposure();
         cors.addMapping("/**")
-            .allowedOrigins("*") // Permitir solicitações de todos os origens
-            .allowedMethods("*") // Permitir os métodos HTTP especificados
+            .allowedOrigins("*") 
+            .allowedMethods("*") 
             .allowedHeaders("*");
-
-       EntityManager em = entityManagerFactory.createEntityManager();
+        config.exposeIdsFor(RelatorioRepository.class);
+        EntityManager em = entityManagerFactory.createEntityManager();
         config.exposeIdsFor(em.getMetamodel().getEntities().stream().map(Type::getJavaType).toArray(Class[]::new));
 
     }
