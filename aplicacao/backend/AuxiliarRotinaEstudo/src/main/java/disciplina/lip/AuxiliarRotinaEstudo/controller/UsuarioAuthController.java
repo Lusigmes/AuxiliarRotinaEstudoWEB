@@ -12,8 +12,10 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import disciplina.lip.AuxiliarRotinaEstudo.dto.AuthResponseDTO;
 import disciplina.lip.AuxiliarRotinaEstudo.dto.LoginTokenResponseDTO;
 import disciplina.lip.AuxiliarRotinaEstudo.dto.LoginUsuarioDTO;
+import disciplina.lip.AuxiliarRotinaEstudo.dto.RefreshTokenRequestDTO;
 import disciplina.lip.AuxiliarRotinaEstudo.dto.RegistroUsuarioDTO;
 import disciplina.lip.AuxiliarRotinaEstudo.dto.UsuarioResponseDTO;
 import disciplina.lip.AuxiliarRotinaEstudo.model.entity.Usuario;
@@ -60,14 +62,15 @@ public class UsuarioAuthController {
     @PostMapping("/login")
     public ResponseEntity<LoginTokenResponseDTO> logar(@RequestBody LoginUsuarioDTO dto){
         try{
-
             Usuario usuarioAuth = usuarioService.logarUsuario(dto);
             
             String jwtToken = jwtService.generateToken(usuarioAuth);
+            String refreshToken = jwtService.generateRefreshToken(usuarioAuth);
             
             LoginTokenResponseDTO loginResponse = new LoginTokenResponseDTO()
-            .setToken(jwtToken)
-            .setExpiresIn(jwtService.getExpirationTime());
+                .setToken(jwtToken)
+                .setRefreshToken(refreshToken)
+                .setExpiresIn(jwtService.getExpirationTime());
             
             return ResponseEntity.ok(loginResponse);
         } catch (BadCredentialsException e) {
@@ -75,6 +78,16 @@ public class UsuarioAuthController {
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
+    }
 
+    @PostMapping("/refresh")
+    public ResponseEntity<AuthResponseDTO> refreshToken(@RequestBody RefreshTokenRequestDTO refreshTokenRequest){
+        try {
+            AuthResponseDTO response = usuarioService.refreshToken(refreshTokenRequest);
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                .body(new AuthResponseDTO(null, null, e.getMessage()));
+        }
     }
 }

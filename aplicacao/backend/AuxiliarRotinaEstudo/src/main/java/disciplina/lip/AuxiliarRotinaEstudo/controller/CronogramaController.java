@@ -6,6 +6,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -22,6 +23,7 @@ import disciplina.lip.AuxiliarRotinaEstudo.dto.CronogramaResponseDTO;
 import disciplina.lip.AuxiliarRotinaEstudo.model.entity.Cronograma;
 import disciplina.lip.AuxiliarRotinaEstudo.model.entity.Usuario;
 import disciplina.lip.AuxiliarRotinaEstudo.repository.CronogramaRepository;
+import disciplina.lip.AuxiliarRotinaEstudo.repository.ItemCronogramaDiarioRepository;
 import disciplina.lip.AuxiliarRotinaEstudo.service.CronogramaService;
 
 
@@ -34,7 +36,8 @@ public class CronogramaController {
     private CronogramaService cronogramaService;
     @Autowired
     private CronogramaRepository cronogramaRepository;
-
+    @Autowired  
+    private ItemCronogramaDiarioRepository itemCronogramaDiarioRepository;
 
     @CrossOrigin
     @PostMapping
@@ -80,10 +83,19 @@ public class CronogramaController {
 
     @CrossOrigin
     @DeleteMapping("/{idCronograma}")
-    public ResponseEntity<Cronograma> deletar(@PathVariable Long idCronograma){
-        cronogramaRepository.deleteById(idCronograma);
+    @Transactional
+    public ResponseEntity<Void> deletar(
+        @PathVariable Long idCronograma,
+        @AuthenticationPrincipal Usuario usuario
+    ) {
+        itemCronogramaDiarioRepository.deleteByCronogramaId(idCronograma);
+        
+        int deleted = cronogramaRepository.deleteByIdAndUsuario(idCronograma, usuario);
+        
+        if (deleted == 0) {
+            return ResponseEntity.notFound().build();
+        }
+        
         return ResponseEntity.status(HttpStatus.NO_CONTENT).build();
     }
-
-    
 }

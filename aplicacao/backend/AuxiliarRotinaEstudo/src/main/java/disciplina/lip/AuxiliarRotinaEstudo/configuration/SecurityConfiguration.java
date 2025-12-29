@@ -25,39 +25,29 @@ public class SecurityConfiguration {
     private final JwtAuthFilter jwtAuthFilter;
     private final AuthenticationProvider jwtAuthProvider;
 
-
     @Bean
     public SecurityFilterChain filterChain(
         HttpSecurity http,
         AuthenticationManager authManager
-        ) throws Exception{ //JwtAuthFilter jwtFilter
+        ) throws Exception {
         http
             .authenticationManager(authManager)
             .csrf(csrf -> csrf.disable())
-            .cors(cors -> cors.configurationSource(corsConfigurationSource())) // <-- aqui
+            .cors(cors -> cors.configurationSource(corsConfigurationSource()))
             .authorizeHttpRequests(auth -> auth
-            .requestMatchers("/auth/registro", "/auth/login").permitAll()
-            .requestMatchers("/estudos/**").hasAnyRole("ALUNO")
-            .requestMatchers("/cronogramas/**").hasAnyRole("ALUNO")
-            .requestMatchers("/relatorios/**").hasAnyRole("ALUNO")
-            .requestMatchers("/revisoes/**").hasAnyRole("ALUNO")
-            .requestMatchers("/itens/**").hasAnyRole("ALUNO")
-            // .requestMatchers(HttpMethod.POST , "/usuarios").permitAll()
-            // .requestMatchers("/usuarios/**").hasAnyRole("ADMIN")
-            // .requestMatchers("/prestadores/**").hasAnyRole("USER", "ADMIN")
-            // .requestMatchers("/avaliacoes/**").hasAnyRole("USER", "ADMIN")
-            // .requestMatchers("/demandas/**").hasAnyRole("USER", "ADMIN")
-            
-            
-            .anyRequest().authenticated()
+                .requestMatchers("/auth/registro", "/auth/login", "/auth/refresh").permitAll()
+                
+                .requestMatchers("/estudos/**").hasRole("ALUNO")
+                .requestMatchers("/cronogramas/**").hasRole("ALUNO")
+                .requestMatchers("/relatorios/**").hasRole("ALUNO")
+                .requestMatchers("/revisoes/**").hasRole("ALUNO")
+                .requestMatchers("/itens/**").hasRole("ALUNO")
+                
+                .anyRequest().authenticated()
             )
             .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authenticationProvider(jwtAuthProvider)
             .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
-            // .httpBasic(httpBasic->{
-            //     httpBasic.realmName("RealmTest");
-            // });
-            
 
         return http.build();    
     }
@@ -65,15 +55,13 @@ public class SecurityConfiguration {
     @Bean
     CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-
-        // configuration.setAllowedOrigins(List.of("http://localhost:8080")); // testar api     
-        configuration.setAllowedOrigins(List.of("http://localhost:5173")); // comunicar com o front
+        configuration.setAllowedOrigins(List.of("http://localhost:5173"));
         configuration.setAllowedMethods(List.of("GET","POST","PUT","DELETE","OPTIONS")); 
         configuration.setAllowedHeaders(List.of("Authorization","Content-Type"));
-    // configuration.setAllowCredentials(true); // se quiser cookies no futuro
+        configuration.setExposedHeaders(List.of("Authorization"));
+        
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
-        source.registerCorsConfiguration("/**",configuration);
+        source.registerCorsConfiguration("/**", configuration);
         return source;
     }
-
 }

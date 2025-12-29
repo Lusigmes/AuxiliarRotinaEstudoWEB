@@ -22,9 +22,19 @@ export interface LoginUsuarioInterface{
     email: string;
     senha: string;
 }
-export interface LoginTokenResponseInterface{
-    token:string;
-    expiresIn: number
+export interface LoginTokenResponseInterface {
+    token: string;
+    refreshToken?: string;
+    expiresIn: number;
+}
+
+export interface AuthResponseInterface {
+    token: string;
+    refreshToken: string;
+    message: string;
+
+}export interface RefreshTokenRequest {
+    refreshToken: string;
 }
     
 export interface ItemCronogramaInterface{
@@ -91,8 +101,6 @@ export interface RelatorioResumoInterface {
   disciplinaMaisEstudada: string;
   tempoTotal: number;
 }
-
-
 
 export interface EstatisticaDisciplinaInterface {
   disciplina: string;

@@ -1,53 +1,52 @@
 <script setup lang="ts">
 import type { RegistroUsuarioInterface } from '@/types';
-import {ref, reactive} from 'vue';
+import { ref, reactive } from 'vue';
 import * as yup from 'yup';
 import { useRouter } from 'vue-router';
 import { watch } from 'vue';
 import { useAuth } from '@/composables/useAuth';
+import { useNotification } from '@/composables/useNotification';
 
 const router = useRouter();
 const { registro, error: authError, loading } = useAuth();
+const { showNotification } = useNotification();
 
-interface Emits{
-    (e:'close'): void // emitir algo
-    (e:'success'): void // emitir algo
+interface Emits {
+  (e: 'close'): void;
+  (e: 'success'): void;
 }
 
-const emit = defineEmits<Emits>()
+const emit = defineEmits<Emits>();
 
 const usuario = reactive<RegistroUsuarioInterface>({
-      nome: "",
-      email: "",
-      senha: "",
-  });
+  nome: "",
+  email: "",
+  senha: "",
+});
 
 const errors = reactive({
-    nome: "",
-    email: "",
-    senha: "",
-    confirmarSenha: ""
+  nome: "",
+  email: "",
+  senha: "",
+  confirmarSenha: ""
 });
 
 const confirmarSenha = ref("");
-const errorGeral = ref("");
 const mostrarSenha = ref(false);
 const mostrarConfirmarSenha = ref(false);
 
-  
 const schema = yup.object({
   nome: yup.string()
-      .required('Nome é obrigatório')
-      .min(2, 'Nome deve ter pelo menos 2 caracteres')
-      .max(100, 'Nome deve ter no máximo 100 caracteres'),
+    .required('Nome é obrigatório')
+    .min(2, 'Nome deve ter pelo menos 2 caracteres')
+    .max(100, 'Nome deve ter no máximo 100 caracteres'),
   email: yup.string()
-      .required('E-mail é obrigatório')
-      .email('E-mail deve ser válido'),
+    .required('E-mail é obrigatório')
+    .email('E-mail deve ser válido'),
   senha: yup.string()
-  .required('Senha é obrigatória')
-  .min(6, 'Senha deve ter pelo menos 6 caracteres'),
+    .required('Senha é obrigatória')
+    .min(6, 'Senha deve ter pelo menos 6 caracteres'),
 });
-
 
 const validarCampo = async (campo: keyof typeof errors) => {
   try {
@@ -72,16 +71,17 @@ const validarForm = async (): Promise<boolean> => {
     
     if (usuario.senha !== confirmarSenha.value) {
       errors.confirmarSenha = 'As senhas não coincidem';
+      showNotification('As senhas não coincidem', 'error');
       return false;
     }
     
-    Object.keys(errors).forEach(key => { 
-      errors[key as keyof typeof errors] = ''; 
+    Object.keys(errors).forEach(key => {
+      errors[key as keyof typeof errors] = '';
     });
     return true;
   } catch (erro: any) {
-    Object.keys(errors).forEach(key => { 
-      errors[key as keyof typeof errors] = ''; 
+    Object.keys(errors).forEach(key => {
+      errors[key as keyof typeof errors] = '';
     });
     
     if (erro.inner) {
@@ -93,30 +93,39 @@ const validarForm = async (): Promise<boolean> => {
       });
     }
     
+    // Mostrar primeiro erro de validação
+    if (erro.errors && erro.errors[0]) {
+      showNotification(erro.errors[0], 'error');
+    }
+    
     return false;
   }
 }
 
-async function registrar(){
-    try{
-      const valido = await validarForm();
-      if(!valido) return;
-          
-      const usuarioEnvio = {
-        ...usuario,
-      };
-      
-      let sucesso = await registro(usuarioEnvio);
-      if(sucesso){
-        emit('success');
-        router.push("/tela-principal");   
-
+async function registrar() {
+  try {
+    const valido = await validarForm();
+    if (!valido) return;
+    
+    const usuarioEnvio = { ...usuario };
+    
+    let sucesso = await registro(usuarioEnvio);
+    if (sucesso) {
+      showNotification('Conta criada com sucesso!', 'success');
+      emit('success');
+      setTimeout(() => {
+        router.push("/tela-principal");
+      }, 1000);
+    } else {
+      if (authError.value) {
+        showNotification(authError.value, 'error');
+      } else {
+        showNotification('Erro ao criar conta. Tente novamente.', 'error');
       }
-    }catch (error: any) {
-      errorGeral.value = error.message || 'Erro ao criar conta. Tente novamente.';
-    } finally {
     }
-
+  } catch (error: any) {
+    showNotification(error.message || 'Erro ao criar conta. Tente novamente.', 'error');
+  }
 }
 
 watch([() => usuario.senha, confirmarSenha], () => {
@@ -124,8 +133,13 @@ watch([() => usuario.senha, confirmarSenha], () => {
     validarConfirmacaoSenha();
   }
 });
-</script>
 
+watch(authError, (newError) => {
+  if (newError) {
+    showNotification(newError, 'error');
+  }
+});
+</script>
 
 <template>
   <v-dialog
@@ -221,27 +235,7 @@ watch([() => usuario.senha, confirmarSenha], () => {
             @click:append-inner="mostrarConfirmarSenha = !mostrarConfirmarSenha"
           />
 
-          <v-alert
-            v-if="errorGeral"
-            type="error"
-            variant="tonal"
-            class="mt-4"
-            closable
-          >
-            {{ errorGeral }}
-          </v-alert>
-
-          <v-alert
-            v-if="authError"
-            type="error"
-            variant="tonal"
-            class="mt-4"
-            closable
-          >
-            {{ authError }}
-          </v-alert>
-
-          <v-card-actions class="form-actions px-0">
+          <v-card-actions class="form-actions px-0 mt-4">
             <v-btn
               @click="$emit('close')"
               variant="outlined"

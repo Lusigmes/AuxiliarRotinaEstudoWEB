@@ -7,6 +7,7 @@ import { converterStringParaData } from '@/utils/dateUtils';
 import { onMounted } from 'vue';
 import { ref, watch } from 'vue';
 import ReagendarRevisaoModal from './ReagendarRevisaoModal.vue';
+import { useNotification } from '@/composables/useNotification';
 
 const props = defineProps<{
   key?: number
@@ -26,6 +27,7 @@ const emit = defineEmits<{
   (e: 'ver-detalhes', payload: RevisaoResponseInterface): void;
 }>();
 
+const { showNotification } = useNotification();
 const revisaoParaReagendar = ref<RevisaoResponseInterface | null>(null);
 const showReagendarDialog = ref(false);
 const loadingConclusao = ref<number | null>(null);
@@ -51,10 +53,11 @@ async function concluirRevisaoItem(revisao: RevisaoResponseInterface) {
     await recarregarPaginaAtual();
     
     emit('atualizar', revisaoConcluida);
+    showNotification('Revisão concluída com sucesso!', 'success');
     
   } catch (error) {
     console.error('Erro ao concluir revisão:', error);
-    alert('Erro ao concluir revisão');
+    showNotification('Erro ao concluir revisão. Tente novamente.', 'error');
   } finally {
     loadingConclusao.value = null;
   }
@@ -63,6 +66,7 @@ async function concluirRevisaoItem(revisao: RevisaoResponseInterface) {
 function abrirModalReagendar(revisao: RevisaoResponseInterface){
   revisaoParaReagendar.value = revisao;
   showReagendarDialog.value = true;
+  showNotification('Reagendando revisão...', 'info');
 };
 
 function fecharModalReagendar(){
@@ -81,7 +85,7 @@ async function confirmarReagendamento(novaData: string){
   cincoDiasAtras.setHours(0, 0, 0, 0);
 
   if (dataInformada < cincoDiasAtras) {
-    alert('Limite para reagendamento: até 5 dias atrás');
+    showNotification('Limite para reagendamento: até 5 dias atrás', 'warning');
     return;
   }
   
@@ -102,13 +106,13 @@ async function confirmarReagendamento(novaData: string){
     
     if (textoParaData.getTime() < hoje.getTime()) {
       setTimeout(() => {
-        alert('Revisão reagendada para data passada. Verifique a aba "Atrasadas".');
-      }, 300);
+        showNotification('Revisão reagendada.', 'success');
+      }, 1000);
     }
     
   } catch (error) {
     console.error('Erro ao reagendar revisão:', error);
-    alert('Erro ao reagendar revisão: ' + error);
+    showNotification('Erro ao reagendar revisão. Tente novamente.', 'error');
   } 
 };
 
@@ -131,6 +135,7 @@ const carregarNomesDisciplinas = async () => {
 onMounted(async () => {
   await carregarRevisoes(0);
   await carregarNomesDisciplinas();
+  showNotification('Revisões pendentes carregadas', 'success');
 });
 
 watch(
@@ -144,7 +149,6 @@ watch(
 watch(
   () => props.key,
   async () => {
-
     await carregarRevisoes(0)
     await carregarNomesDisciplinas()
   }

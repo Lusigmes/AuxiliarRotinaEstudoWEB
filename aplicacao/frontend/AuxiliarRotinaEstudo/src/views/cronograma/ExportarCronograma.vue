@@ -4,6 +4,7 @@ import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import type { CronogramaResponseInterface, ItemCronogramaResponseInterface } from '@/types';
 import { DiasSemana } from '@/types/enums';
+import { useNotification } from '@/composables/useNotification';
 
 const props = defineProps<{
   cronograma: CronogramaResponseInterface;
@@ -11,6 +12,7 @@ const props = defineProps<{
 }>();
 
 const emit = defineEmits(['exportar', 'exportado', 'cancelar', 'fechar']);
+const { showNotification } = useNotification();
 
 const titulo = ref('Meu Cronograma de Estudos');
 const incluirObservacoes = ref(false);
@@ -25,7 +27,7 @@ function getItensDoDia(dia: DiasSemana): ItemCronogramaResponseInterface[] {
 
 async function gerarPDF() {
   if (!titulo.value.trim()) {
-    alert('Digite um título para o cronograma');
+    showNotification('Digite um título para o cronograma', 'warning');
     return;
   }
 
@@ -148,19 +150,18 @@ async function gerarPDF() {
     const filename = `cronograma-estudos-${new Date().toISOString().split('T')[0]}.pdf`;
     doc.save(filename);
     
+    showNotification('PDF gerado e baixado com sucesso!', 'success');
     emit('exportado');
     emit('fechar');
     
   } catch (error) {
     console.error('Erro ao gerar PDF:', error);
-    alert('Erro ao gerar o PDF. Tente novamente.');
+    showNotification('Erro ao gerar o PDF. Tente novamente.', 'error');
   } finally {
     exportando.value = false;
   }
 }
 </script>
-
-
 
 <template>
   <v-card variant="flat" elevation="2">

@@ -1,18 +1,21 @@
 <script setup lang="ts">
 import { ref, reactive, watch } from 'vue';
-import {useRouter} from 'vue-router';
+import { useRouter } from 'vue-router';
 import Registro from './Registro.vue';
 import { useAuth } from '@/composables/useAuth';
+import { useNotification } from '@/composables/useNotification';
 import type { LoginUsuarioInterface } from '@/types';
 
 const router = useRouter();
-const {login, error, loading, token} = useAuth();
+const { login, error: authError, loading, token } = useAuth();
+const { showNotification } = useNotification();
 
 const mostrarModalRegistro = ref(false);
 const mostrarSenha = ref(false);
 
 const loginData = reactive<LoginUsuarioInterface>({
-  email:'', senha:''
+  email: '',
+  senha: ''
 });
 
 const rules = {
@@ -23,23 +26,37 @@ const rules = {
   }
 };
 
-async function fazerLogin(){
+async function fazerLogin() {
   const sucesso = await login(loginData);
-  if(sucesso){
-    router.push("/tela-principal");
-  }else{
-    alert("Falha no login"); // tratar com notificação
+  if (sucesso) {
+    showNotification('Login realizado com sucesso!', 'success');
+    setTimeout(() => {
+      router.push("/tela-principal");
+    }, 500);
+  } else {
+    if (authError.value) {
+      showNotification(authError.value, 'error');
+    } else {
+      showNotification('Falha no login. Verifique suas credenciais.', 'error');
+    }
   }
 }
 
 const registroSucesso = () => {
-  mostrarModalRegistro.value = false
-  loginData.email = ''
-  loginData.email = ''
+  mostrarModalRegistro.value = false;
+  loginData.email = '';
+  loginData.senha = '';
+  showNotification('Conta criada com sucesso! Faça login para continuar.', 'success');
 };
 
 watch(token, (newToken) => {
   console.log('Token mudou:', newToken);
+});
+
+watch(authError, (newError) => {
+  if (newError) {
+    showNotification(newError, 'error');
+  }
 });
 </script>
 
@@ -116,16 +133,6 @@ watch(token, (newToken) => {
                       Entrar
                     </template>
                   </v-btn>
-
-                  <v-alert
-                    v-if="error"
-                    type="error"
-                    variant="tonal"
-                    class="mt-4"
-                    closable
-                  >
-                    {{ error }}
-                  </v-alert>
                 </v-form>
               </v-card-text>
 

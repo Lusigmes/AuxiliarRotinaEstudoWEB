@@ -5,6 +5,7 @@ import { useRevisaoPaginada } from '@/composables/useRevisaoPaginada';
 import type { RevisaoResponseInterface } from '@/types';
 import { onMounted } from 'vue';
 import { ref, watch } from 'vue';
+import { useNotification } from '@/composables/useNotification';
 
 const props = defineProps<{
   key?: number
@@ -21,6 +22,7 @@ const emit = defineEmits<{
   (e: 'ver-detalhes', payload: RevisaoResponseInterface): void;
 }>();
 
+const { showNotification } = useNotification();
 const nomeDisciplinas = ref<Record<number, string>>({});
 const loadingNomes = ref(false);
 
@@ -52,6 +54,9 @@ const carregarNomesDisciplinas = async () => {
   try {
     const promessas = revisoesDaPagina.value.map(r => fetchNomeDisciplina(r.idEstudo));
     await Promise.all(promessas);
+  } catch (error) {
+    console.error('Erro ao carregar nomes das disciplinas:', error);
+    showNotification('Erro ao carregar nomes das disciplinas', 'warning');
   } finally {
     loadingNomes.value = false;
   }
@@ -60,6 +65,7 @@ const carregarNomesDisciplinas = async () => {
 onMounted(async () => {
   await carregarRevisoes(0);
   await carregarNomesDisciplinas();
+  showNotification('Revisões concluídas carregadas', 'success');
 });
 
 watch(

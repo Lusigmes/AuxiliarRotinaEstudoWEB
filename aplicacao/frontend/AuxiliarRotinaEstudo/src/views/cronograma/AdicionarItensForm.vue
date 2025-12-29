@@ -2,6 +2,7 @@
 import { ref } from 'vue';
 import { DiasSemana } from '@/types/enums';
 import type { ItemCronogramaInterface, ModoAdicao } from '@/types';
+import { useNotification } from '@/composables/useNotification';
 
 const props = defineProps<{
   modoAdicao: ModoAdicao;
@@ -9,6 +10,7 @@ const props = defineProps<{
 }>();
 
 const emits = defineEmits(['adicionar-item', 'remover-item', 'cancelar', 'finalizar']);
+const { showNotification } = useNotification();
 
 const novoItem = ref<ItemCronogramaInterface>({ nomeDisciplina: '', diaSemana: DiasSemana.SEGUNDA });
 
@@ -28,7 +30,10 @@ function formatarDiaSemana(dia: DiasSemana) {
 }
 
 function emitirAdicionarItem() {
-  if (!novoItem.value.nomeDisciplina) return;
+  if (!novoItem.value.nomeDisciplina) {
+    showNotification('Digite o nome da disciplina', 'warning');
+    return;
+  }
   
   const itensNoMesmoDia = props.itensTemporarios.filter(
     item => item.diaSemana === novoItem.value.diaSemana
@@ -41,6 +46,8 @@ function emitirAdicionarItem() {
   
   emits('adicionar-item', itemComOrdem);
   novoItem.value = { nomeDisciplina: '', diaSemana: DiasSemana.SEGUNDA };
+  
+  showNotification('Disciplina adicionada a lista', 'success');
 }
 </script>
 

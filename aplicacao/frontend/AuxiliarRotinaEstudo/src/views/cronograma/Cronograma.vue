@@ -3,12 +3,14 @@ import { ref, computed, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import AdicionarItensForm from './AdicionarItensForm.vue';
 import ExportarCronograma from './ExportarCronograma.vue';
+import { useNotification } from '@/composables/useNotification';
 
 import {
   verificarCronogramaDoUsuarioExiste,
   buscarCronogramaDoUsuario,
   criarCronograma,
-  adicionarItemCronograma
+  adicionarItemCronograma,
+  deletarCronograma
 } from '@/api/CronogramaService';
 import { deletarItem as del, atualizarItem, reordenarItensDia }  from '@/api/ItemCronogramaService';
 import {
@@ -22,6 +24,7 @@ import {
 import { DiasSemana } from '@/types/enums';
 
 const router = useRouter();
+const { showNotification } = useNotification();
 
 const estado = ref<Estado>('semCronograma');
 const modoAdicao = ref<ModoAdicao>('criar');
@@ -104,16 +107,19 @@ function iniciarCriacaoCronograma() {
   modoAdicao.value = 'criar';
   itensTemporarios.value = [];
   modalFormAddItens.value = true;
+  showNotification('Criando novo cronograma', 'info');
 };
 
 function iniciarAdicaoItens() {
   modoAdicao.value = 'adicionar';
   itensTemporarios.value = [];
   modalFormAddItens.value = true;
+  showNotification('Adicionando itens ao cronograma', 'info');
 };
 
 function iniciarExportarPDF() {
   modalExportar.value = true;
+  showNotification('Preparando exportação em PDF', 'info');
 };
 
 function fecharModalExportar() {
@@ -142,6 +148,7 @@ async function finalizarAdicaoItens() {
     if (modoAdicao.value === 'criar') {
       const cronogramaDTO: CronogramaInterface = { itensDoDia: itensTemporarios.value };
       cronograma.value = await criarCronograma(cronogramaDTO);
+      showNotification('Cronograma criado com sucesso!', 'success');
     } else {
       if (!cronograma.value) throw new Error('Cronograma não encontrado');
       
@@ -173,6 +180,7 @@ async function finalizarAdicaoItens() {
         cronograma.value.id, 
         { itensDoDia: itensComOrdem }
       );
+      showNotification(`${itensTemporarios.value.length} itens adicionados ao cronograma`, 'success');
     }
    
     estado.value = 'visualizando';
@@ -183,6 +191,7 @@ async function finalizarAdicaoItens() {
     inicializarOrdemItens();
   } catch (err) {
     console.error(err);
+    showNotification('Erro ao salvar cronograma. Tente novamente.', 'error');
   } finally {
     loading.value = false;
   }
@@ -226,11 +235,13 @@ async function carregarCronograma() {
       inicializarOrdemItens();
       
       sincronizarOrdemComBackend();
+      showNotification('Cronograma carregado com sucesso!', 'success');
     } else estado.value = 'semCronograma';
   
   } catch (err) {
     console.error('Erro ao carregar cronograma:', err);
     estado.value = 'semCronograma';
+    showNotification('Erro ao carregar cronograma. Tente novamente.', 'error');
   } finally {
     loading.value = false;
   }
@@ -268,9 +279,10 @@ async function deletarItem(idItem: number){
       });
     }
 
+    showNotification('Disciplina removida com sucesso!', 'success');
   } catch (error) {
     console.error('Erro ao remover item:', error);
-    alert('Erro ao remover disciplina. Tente novamente.');
+    showNotification('Erro ao remover disciplina. Tente novamente.', 'error');
   } finally {
     loading.value = false;
     itemHoverId.value = null;
@@ -300,18 +312,26 @@ function cancelarEdicao(){
 async function salvarEdicaoItem(idItem: number){
   if(!textoEditando.value.trim()){
     cancelarEdicao();
+    showNotification('Nome da disciplina não pode estar vazio', 'warning');
     return;
   }
+  
+  if(textoEditando.value.trim() === textoEditandoOriginal.value){
+    cancelarEdicao();
+    return;
+  }
+  
   loading.value = true;
   try {
     const targetItem = itensMap.value.get(idItem);
     if(targetItem && cronograma.value){
       targetItem.nomeDisciplina = textoEditando.value.trim();
       await atualizarItem(idItem, {...targetItem, nomeDisciplina: textoEditando.value.trim()} );
+      showNotification('Disciplina editada com sucesso!', 'success');
     }
   } catch (error) {
     console.error('Erro ao editar item:', error);
-    alert('Erro ao editar disciplina. Tente novamente.');
+    showNotification('Erro ao editar disciplina. Tente novamente.', 'error');
     await carregarCronograma();
   } finally {
     loading.value = false;
@@ -326,7 +346,6 @@ function reordenarArray<T>(array: T[], fromIndex: number, toIndex: number): T[] 
   newArray.splice(toIndex, 0, removed!);
   return newArray;
 }
-
 
 async function salvarReordenacaoComDebounce(dia: DiasSemana, idsOrdenados: number[]) {
   if (debounceTimeout) {
@@ -348,12 +367,22 @@ async function salvarReordenacaoComDebounce(dia: DiasSemana, idsOrdenados: numbe
         });
       }
       
+
+      ultimoDiaReordenado = null;
+      
     } catch (error) {
       console.warn('Erro ao salvar reordenação:', error);
+      showNotification('Erro ao salvar ordenação das disciplinas', 'warning');
     }
-  }, 50); // 50ms de debounce
+  }, 50);
+};
+function limparDebounce() {
+  if (debounceTimeout) {
+    clearTimeout(debounceTimeout);
+    debounceTimeout = null;
+  }
+  ultimoDiaReordenado = null;
 }
-
 function iniciarArrastar(item: ItemCronogramaResponseInterface, index: number, event: DragEvent){
   if(itemEditandoId.value) return;
 
@@ -380,12 +409,14 @@ function finalizarArrastar(event: DragEvent){
   itemArrastando.value = null;
   dropTarget.value = { dia: null, index: null };
   
-  if (ultimoDiaReordenado) {
-    const ordem = ordemItensPorDia.value.get(ultimoDiaReordenado);
-    if (ordem) {
-      salvarReordenacaoComDebounce(ultimoDiaReordenado, ordem);
-    }
-  }
+  ultimoDiaReordenado = null;
+ 
+  // if (ultimoDiaReordenado) {
+  //   const ordem = ordemItensPorDia.value.get(ultimoDiaReordenado);
+  //   if (ordem) {
+  //     salvarReordenacaoComDebounce(ultimoDiaReordenado, ordem);
+  //   }
+  // }
 };
 
 function permitirDrop(event: DragEvent){
@@ -416,7 +447,7 @@ async function soltarItem(dia: DiasSemana, event: DragEvent){
     return;
   }
   
-  const idItem = itemArrastando.value.id;
+  // const idItem = itemArrastando.value.id;
   const itemIndex = itemArrastando.value.index;
   const dropIndex = dropTarget.value.index ?? itemIndex;
 
@@ -440,12 +471,13 @@ async function soltarItem(dia: DiasSemana, event: DragEvent){
       });
     }
     
-    ultimoDiaReordenado = dia;
     await salvarReordenacaoComDebounce(dia, novaOrdem);
+    
+    showNotification('Ordem das disciplinas atualizada', 'success');
     
   } catch (error) {
     console.error('Erro ao reordenar item:', error);
-    alert('Erro ao reordenar disciplina. Tente novamente.');
+    showNotification('Erro ao reordenar disciplina. Tente novamente.', 'error');
     await carregarCronograma(); 
   } finally {
     finalizarArrastar(event);
@@ -453,10 +485,12 @@ async function soltarItem(dia: DiasSemana, event: DragEvent){
 };
 
 async function moverEntreDias(idItem: number, novoDia: DiasSemana) {
+  limparDebounce();
   try {
     const targetItem = itensMap.value.get(idItem);
     if(!targetItem || !cronograma.value) return;
     
+    const diaAntigo = targetItem.diaSemana;
     const itensNoNovoDia = cronograma.value.itensDoDia.filter(item => 
       item.diaSemana === novoDia && item.id !== idItem
     );
@@ -471,28 +505,53 @@ async function moverEntreDias(idItem: number, novoDia: DiasSemana) {
     targetItem.diaSemana = novoDia;
     targetItem.ordem = novaOrdem;
     
-    const diaAntigo = itemArrastando.value?.diaSemana;
-    if (diaAntigo) {
+    if (diaAntigo !== novoDia) {
       const itensDiaAntigo = cronograma.value.itensDoDia
         .filter(item => item.diaSemana === diaAntigo && item.id !== idItem)
         .sort((a, b) => (a.ordem || 0) - (b.ordem || 0));
       
+      
       itensDiaAntigo.forEach((item, index) => {
-        item.ordem = index;
+        if (item.ordem !== index) {
+          item.ordem = index;
+        }
       });
       
-      const idsDiaAntigo = itensDiaAntigo.map(item => item.id);
-      ordemItensPorDia.value.set(diaAntigo, idsDiaAntigo);
-      await salvarReordenacaoComDebounce(diaAntigo, idsDiaAntigo);
+      if (itensDiaAntigo.length > 0) {
+        const idsDiaAntigo = itensDiaAntigo.map(item => item.id);
+        ordemItensPorDia.value.set(diaAntigo, idsDiaAntigo);
+        
+        const itensComOrdemAlterada = itensDiaAntigo.filter(item => 
+          item.ordem !== itensDiaAntigo.indexOf(item)
+        );
+        
+        if (itensComOrdemAlterada.length > 0) {
+          await salvarReordenacaoComDebounce(diaAntigo, idsDiaAntigo);
+        }
+      } else {
+        ordemItensPorDia.value.set(diaAntigo, []);
+      }
     }
     
-    inicializarOrdemItens();
+    const idsNovoDia = cronograma.value.itensDoDia
+      .filter(item => item.diaSemana === novoDia)
+      .sort((a, b) => (a.ordem || 0) - (b.ordem || 0))
+      .map(item => item.id);
+    
+    ordemItensPorDia.value.set(novoDia, idsNovoDia);
+    
+
+    
+    showNotification('Disciplina movida para outro dia', 'success');
     
   } catch (error) {
     console.error('Erro ao mover item entre dias:', error);
+    showNotification('Erro ao mover disciplina. Tente novamente.', 'error');
+    await carregarCronograma();
     throw error;
   }
 };
+
 // add inline
 function ativarInputRapido(dia: DiasSemana) {
   diaAdicionando.value = dia;
@@ -511,7 +570,10 @@ function cancelarDisciplinaRapida() {
 };
 
 async function salvarDisciplinaRapida(dia: DiasSemana) {
-  if (!nomeDisciplinaInline.value.trim() || !cronograma.value) return;
+  if (!nomeDisciplinaInline.value.trim() || !cronograma.value) {
+    showNotification('Digite o nome da disciplina', 'warning');
+    return;
+  }
 
   const itensDoDia = cronograma.value.itensDoDia.filter(item => item.diaSemana === dia);
   const proximaOrdem = itensDoDia.length; 
@@ -522,22 +584,65 @@ async function salvarDisciplinaRapida(dia: DiasSemana) {
     ordem: proximaOrdem 
   };
   
-  const atualizado = await adicionarItemCronograma(cronograma.value.id, { itensDoDia: [novoItem] });
-  
-  cronograma.value = atualizado;
-  diaAdicionando.value = null;
-  nomeDisciplinaInline.value = '';
+  try {
+    const atualizado = await adicionarItemCronograma(cronograma.value.id, { itensDoDia: [novoItem] });
+    
+    cronograma.value = atualizado;
+    diaAdicionando.value = null;
+    nomeDisciplinaInline.value = '';
 
-  atualizarMapItens();
-  inicializarOrdemItens();
+    atualizarMapItens();
+    inicializarOrdemItens();
+    
+    showNotification('Disciplina adicionada com sucesso!', 'success');
+  } catch (error) {
+    console.error('Erro ao adicionar disciplina:', error);
+    showNotification('Erro ao adicionar disciplina. Tente novamente.', 'error');
+  }
 };
-
+// Adicione esta função junto com os outros métodos, antes do onMounted
+async function deletarCronogramaConfirm() {
+  if (!cronograma.value) return;
+  
+  if (confirm('Tem certeza que deseja deletar o cronograma atual? Esta ação não pode ser desfeita.')) {
+    loading.value = true;
+    try {
+      await deletarCronograma(cronograma.value.id);
+      showNotification('Cronograma deletado com sucesso!', 'success');
+      
+      // Resetar completamente o estado local
+      cronograma.value = null;
+      itensMap.value.clear();
+      ordemItensPorDia.value.clear();
+      estado.value = 'semCronograma';
+      
+      // Forçar recarregamento dos dados
+      await carregarCronograma();
+      
+    } catch (error: any) {
+      console.error('Erro ao deletar cronograma:', error);
+      
+      // Verificar o tipo de erro
+      if (error.response?.status === 404) {
+        // Cronograma já não existe mais
+        showNotification('Cronograma já foi removido', 'info');
+        cronograma.value = null;
+        estado.value = 'semCronograma';
+      } else if (error.response?.status === 403) {
+        showNotification('Acesso negado para deletar este cronograma', 'error');
+      } else {
+        showNotification('Erro ao deletar cronograma. Tente novamente.', 'error');
+      }
+    } finally {
+      loading.value = false;
+    }
+  }
+};
 onMounted(async () => {
   await carregarCronograma();
 });
   
 </script>
-
 <template>
   <v-container fluid class="pa-6">
     <v-breadcrumbs :items="breadcrumbs" class="px-0 mb-4">
@@ -557,6 +662,19 @@ onMounted(async () => {
 
         <template #append>
           <div class="d-flex gap-2">
+            <v-btn
+              v-if="estado === 'visualizando' && cronograma"
+              color="error"
+              variant="tonal"
+              @click="deletarCronogramaConfirm"
+              class="btn-delete-cronograma"
+              :loading="loading"
+            >
+              <v-icon>mdi-delete</v-icon>
+              <v-tooltip activator="parent" location="bottom">
+                Deletar cronograma atual
+              </v-tooltip>
+            </v-btn>
             <v-btn
               v-if="estado === 'visualizando'"
               color="primary"
@@ -1033,5 +1151,18 @@ onMounted(async () => {
 
 .drop-zone-active .item-container:not(.dragging-item):hover {
   transform: translateY(-2px);
+}
+.btn-delete-cronograma {
+  min-width: 40px !important;
+  width: 40px !important;
+  padding: 0 8px !important;
+}
+
+.btn-delete-cronograma .v-icon {
+  margin: 0 !important;
+}
+
+.d-flex.gap-2 .v-btn {
+  height: 36px !important;
 }
 </style>

@@ -3,9 +3,11 @@ package disciplina.lip.AuxiliarRotinaEstudo.repository;
 import java.util.List;
 
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.data.rest.core.annotation.RepositoryRestResource;
+import org.springframework.transaction.annotation.Transactional;
 
 import disciplina.lip.AuxiliarRotinaEstudo.model.entity.ItemCronogramaDiario;
 import disciplina.lip.AuxiliarRotinaEstudo.model.entity.Usuario;
@@ -32,7 +34,10 @@ public interface ItemCronogramaDiarioRepository extends JpaRepository<ItemCronog
         @Param("usuario") Usuario usuario, 
         @Param("diaSemana") DiaSemana diaSemana
     );
-
-
+    
+    @Query("DELETE FROM ItemCronogramaDiario i WHERE i.cronograma.id = :cronogramaId")
+    @Modifying
+    @Transactional
+    void deleteByCronogramaId(@Param("cronogramaId") Long cronogramaId);
 }
 

@@ -30,6 +30,7 @@ export class PdfExportService {
     estudosDiario: EstudoDiarioInterface[];
     statusRevisoes: RevisaoStatusInterface[];
     tempoPorDisciplina: Record<string, number> | null;
+    disciplinasCount?: number;
     topDisciplinas: EstatisticaDisciplinaInterface[];
     periodoInicio: string;
     periodoFim: string;
@@ -42,6 +43,7 @@ export class PdfExportService {
         estudosDiario,
         statusRevisoes,
         tempoPorDisciplina,
+        disciplinasCount,
         topDisciplinas,
         periodoInicio,
         periodoFim
@@ -107,6 +109,9 @@ export class PdfExportService {
       doc.text(`• Tempo Total: ${resumo?.tempoTotal || 0}h`, 25, yPos);
       yPos += 7;
       doc.text(`• Média Diária: ${(resumo?.mediaTempoDiario || 0).toFixed(1)}h`, 25, yPos);
+      yPos += 7;
+      const disciplinasQtd = disciplinasCount ?? (tempoPorDisciplina ? Object.keys(tempoPorDisciplina).length : 0);
+      doc.text(`• Disciplinas: ${disciplinasQtd}`, 25, yPos);
       yPos += 7;
       doc.text(`• Disciplina Mais Estudada: ${resumo?.disciplinaMaisEstudada || 'Nenhuma'}`, 25, yPos);
       yPos += 15;

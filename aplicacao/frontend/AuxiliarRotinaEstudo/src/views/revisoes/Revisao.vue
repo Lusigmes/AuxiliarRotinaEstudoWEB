@@ -8,6 +8,7 @@ import RevisoesAtrasadas from './RevisoesAtrasadas.vue';
 import { converterStringParaData } from '@/utils/dateUtils';
 import { useRevisaoStore } from '@/stores/revisaoStore';
 import RevisoesConcluidas from './RevisoesConcluidas.vue';
+import { useNotification } from '@/composables/useNotification';
 
 const breadcrumbs = [
   { title: 'Dashboard', disabled: false, to: '/tela-principal' },
@@ -23,6 +24,7 @@ const recarregarAtrasadas = ref(0)
 const recarregarConcluidas = ref(0)
 
 const revisaoStore = useRevisaoStore();
+const { showNotification } = useNotification();
   
 const revisoes = computed(() => revisaoStore.todasRevisoes);
 const contadorPendentes = computed(() => revisaoStore.contadorPendentes);
@@ -47,6 +49,7 @@ function abrirDetalhesRevisaoSimples(revisao: RevisaoResponseInterface) {
 
 async function atualizarListas(){
   await revisaoStore.carregarTodasRevisoes();
+  showNotification('Listas de revisões atualizadas', 'success');
 };
 
 function onRevisaoAtualizada(revisao: RevisaoResponseInterface) {
@@ -65,14 +68,16 @@ function onRevisaoAtualizada(revisao: RevisaoResponseInterface) {
     
     if (revisao.concluida) {
       recarregarConcluidas.value++
+      showNotification('Revisão concluída com sucesso!', 'success');
     } else if (dataRevisao < hoje) {
       recarregarAtrasadas.value++
+      showNotification('Revisão atualizada para data passada.', 'warning');
       setTimeout(() => {
-        alert('Revisão atualizada para data passada. Verifique a aba "Atrasadas".')
         abaAtiva.value = 'atrasadas'
-      }, 100)
+      }, 500)
     } else if (dataRevisao >= hoje) {
       recarregarPendentes.value++
+      showNotification('Revisão reagendada com sucesso!', 'success');
     }
   }, 100)
 };
@@ -82,15 +87,19 @@ watch(() => abaAtiva.value, async (novaAba) => {
   
   if (novaAba === 'pendentes') {
     recarregarPendentes.value++;
+    showNotification('Carregando revisões pendentes', 'info');
   } else if (novaAba === 'atrasadas') {
     recarregarAtrasadas.value++;
+    showNotification('Carregando revisões atrasadas', 'info');
   } else if (novaAba === 'concluidas') {
     recarregarConcluidas.value++;
+    showNotification('Carregando revisões concluídas', 'info');
   }
 });
 
 onMounted(async () => {
   await revisaoStore.inicializar();
+  showNotification('Revisões carregadas com sucesso!', 'success');
 });
 </script>
 

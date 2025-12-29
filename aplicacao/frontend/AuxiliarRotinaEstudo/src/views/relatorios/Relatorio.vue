@@ -1,3 +1,363 @@
+<script setup lang="ts">
+import { ref, onMounted, watch, nextTick, onBeforeUnmount, computed } from 'vue';
+import Chart from 'chart.js/auto';
+import { useRouter } from 'vue-router';
+import { useNotification } from '@/composables/useNotification';
+import { 
+  obterResumo,
+  obterEstatisticasDisciplinas,
+  obterEstudosDiario,
+  obterStatusRevisoes,
+  obterTempoPorDisciplina,
+  obterDashboard
+} from '@/api/RelatorioService';
+import type { 
+  RelatorioResumoInterface, 
+  EstatisticaDisciplinaInterface,
+  EstudoDiarioInterface,
+  RevisaoStatusInterface,
+  DashboardInterface 
+} from '@/types';
+import { 
+  validarFormatoData,
+  formatarDataParaDisplay,
+  getDataHoraAtualFormatada,
+} from '@/utils/dateUtils';
+import { exportarPdfRelatorio } from '@/utils/pdfRelatorioExportService';
+
+const router = useRouter();
+const { showNotification } = useNotification();
+
+const breadcrumbs = [
+  { 
+    title: 'Dashboard', 
+    disabled: false, 
+    to: '/tela-principal',
+    exact: true 
+  },
+  { 
+    title: 'Relatórios', 
+    disabled: true 
+  }
+];
+
+const loading = ref(false);
+const filtroInicio = ref('');
+const filtroFim = ref('');
+const expandirTabela = ref(false);
+const exportando = ref(false);
+const exportandoTabela = ref(false);
+
+const resumo = ref<RelatorioResumoInterface | null>(null);
+const estatisticasDisciplinas = ref<EstatisticaDisciplinaInterface[]>([]);
+const estudosDiario = ref<EstudoDiarioInterface[]>([]);
+const statusRevisoes = ref<RevisaoStatusInterface[]>([]);
+const tempoPorDisciplina = ref<Record<string, number> | null>(null);
+const dashboardData = ref<DashboardInterface | null>(null);
+const topDisciplinas = ref<EstatisticaDisciplinaInterface[]>([]);
+
+const disciplinasCount = computed(() => tempoPorDisciplina.value ? Object.keys(tempoPorDisciplina.value).length : 0);
+
+const pieChart = ref<HTMLCanvasElement | null>(null);
+let chartInstance: Chart | null = null;
+
+const totalRevisoes = computed(() => {
+  if (!statusRevisoes.value) return 0;
+  return statusRevisoes.value.reduce((total, status) => total + (status.quantidade || 0), 0);
+});
+
+const getStatusCount = (statusKey: string) => {
+  if (!statusRevisoes.value) return 0;
+  const status = statusRevisoes.value.find(s => 
+    s.status.toLowerCase() === statusKey.toLowerCase()
+  );
+  return status?.quantidade || 0;
+};
+
+const validarData = (value: string) => {
+  if (!value) return true;
+  return validarFormatoData(value) || 'Data inválida. Use DD/MM/AAAA';
+};
+
+const calcularPercentualTempo = (tempoDisciplina: number): number => {
+  const total = resumo.value?.tempoTotal ?? calcularTotalTempo();
+  if (!total || total === 0) return 0;
+  const pct = (tempoDisciplina / total) * 100;
+  if (!isFinite(pct)) return 0;
+  return Math.max(0, Math.min(100, Number(pct.toFixed(1))));
+};
+
+const formatarPercentual = (valor: number): string => {
+  if (valor === null || valor === undefined) return '0%';
+  return `${Number(valor).toFixed(1)}%`;
+};
+
+const calcularCorPercentual = (tempoDisciplina: number): string => {
+  const percentual = calcularPercentualTempo(tempoDisciplina);
+  if (percentual > 50) return 'primary';
+  if (percentual > 25) return 'blue';
+  if (percentual > 10) return 'cyan';
+  return 'grey';
+};
+
+const calcularPercentualRanking = (tempoDisciplina: number): number => {
+  if (!topDisciplinas.value.length || !topDisciplinas.value[0]?.totalTempo) return 0;
+  const maxTempo = topDisciplinas.value[0].totalTempo || 1;
+  return (tempoDisciplina / maxTempo) * 100;
+};
+
+const calcularTotalTempo = (): number => {
+  if (!tempoPorDisciplina.value) return 0;
+  return Object.values(tempoPorDisciplina.value).reduce((acc, val) => acc + val, 0);
+};
+
+
+async function exportarPDF() {
+  if (!resumo.value) {
+    showNotification('Carregue os dados do relatório primeiro', 'warning');
+    return;
+  }
+
+  exportando.value = true;
+  
+  try {
+    await exportarPdfRelatorio.generatePDF({
+      resumo: resumo.value,
+      estatisticasDisciplinas: estatisticasDisciplinas.value,
+      estudosDiario: estudosDiario.value,
+      statusRevisoes: statusRevisoes.value,
+      tempoPorDisciplina: tempoPorDisciplina.value,
+      disciplinasCount: disciplinasCount.value,
+      topDisciplinas: topDisciplinas.value,
+      periodoInicio: filtroInicio.value || (resumo.value?.periodoInicio || ''),
+      periodoFim: filtroFim.value || (resumo.value?.periodoFim || '')
+    });
+    
+    showNotification('PDF gerado e baixado com sucesso!', 'success');
+    
+  } catch (error) {
+    console.error('Erro detalhado ao exportar PDF:', error);
+    showNotification(`Erro ao gerar PDF: ${error instanceof Error ? error.message : 'Tente novamente.'}`, 'error');
+  } finally {
+    exportando.value = false;
+  }
+}
+
+async function exportarTabela() {
+  if (estatisticasDisciplinas.value.length === 0) {
+    showNotification('Não há dados para exportar', 'warning');
+    return;
+  }
+
+  exportandoTabela.value = true;
+  
+  try {
+    exportarPdfRelatorio.exportTabelaCSV(estatisticasDisciplinas.value, resumo.value);
+    showNotification('Tabela exportada com sucesso!', 'success');
+  } catch (error) {
+    console.error('Erro ao exportar tabela:', error);
+    showNotification('Erro ao exportar tabela. Tente novamente.', 'error');
+  } finally {
+    exportandoTabela.value = false;
+  }
+}
+
+function destruirGrafico() {
+  if (chartInstance) {
+    chartInstance.destroy();
+    chartInstance = null;
+  }
+}
+
+function criarGraficoPizza() {
+  destruirGrafico();
+  
+  if (!pieChart.value || !tempoPorDisciplina.value) {
+    return;
+  }
+  
+  const labels = Object.keys(tempoPorDisciplina.value);
+  const data = Object.values(tempoPorDisciplina.value);
+  
+  if (labels.length === 0 || data.length === 0) {
+    return;
+  }
+  
+  const ctx = pieChart.value.getContext('2d');
+  if (ctx) {
+    ctx.clearRect(0, 0, pieChart.value.width, pieChart.value.height);
+  }
+
+  const backgroundColors = [
+    '#6366F1', '#EC4899', '#10B981', '#F59E0B', 
+    '#3B82F6', '#EF4444', '#8B5CF6', '#06B6D4',
+    '#84CC16', '#F97316', '#8B5CF6', '#64748B'
+  ];
+
+  try {
+    chartInstance = new Chart(pieChart.value, {
+      type: 'doughnut',
+      data: {
+        labels: labels,
+        datasets: [{
+          data: data,
+          backgroundColor: backgroundColors.slice(0, labels.length),
+          borderWidth: 2,
+          borderColor: '#ffffff',
+          hoverOffset: 15,
+          borderRadius: 8
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: {
+            position: 'right',
+            labels: {
+              padding: 15,
+              usePointStyle: true,
+              font: {
+                size: 11
+              },
+              color: '#424242',
+              boxWidth: 8,
+              boxHeight: 8
+            }
+          },
+          tooltip: {
+            backgroundColor: 'rgba(0, 0, 0, 0.9)',
+            titleColor: '#fff',
+            bodyColor: '#fff',
+            padding: 12,
+            cornerRadius: 6,
+            boxPadding: 6,
+            callbacks: {
+              label: (context) => {
+                const label = context.label || '';
+                const value = context.raw as number;
+                const total = context.dataset.data.reduce((a: number, b: number) => a + b, 0);
+                const percentage = Math.round((value / total) * 100);
+                return `${label}: ${value}h (${percentage}%)`;
+              }
+            }
+          }
+        },
+        cutout: '65%',
+        animation: {
+          animateScale: true,
+          animateRotate: true,
+          duration: 1000,
+          easing: 'easeOutQuart'
+        }
+      }
+    });
+    
+    showNotification('Gráfico atualizado com sucesso!', 'success');
+  } catch (error) {
+    console.error('Erro ao criar gráfico:', error);
+    showNotification('Erro ao criar gráfico de distribuição', 'warning');
+  }
+}
+
+async function carregarRelatorios() {
+  loading.value = true;
+  try {
+    const [
+      resumoData,
+      disciplinasData,
+      estudosData,
+      statusData,
+      tempoData,
+      dashboardDataResponse
+    ] = await Promise.all([
+      obterResumo(filtroInicio.value, filtroFim.value).catch(() => null),
+      obterEstatisticasDisciplinas(filtroInicio.value, filtroFim.value).catch(() => []),
+      obterEstudosDiario(filtroInicio.value, filtroFim.value).catch(() => []),
+      obterStatusRevisoes().catch(() => []),
+      obterTempoPorDisciplina(filtroInicio.value, filtroFim.value).catch(() => ({})),
+      obterDashboard().catch(() => null)
+    ]);
+
+    resumo.value = resumoData;
+    estatisticasDisciplinas.value = disciplinasData;
+    estudosDiario.value = estudosData;
+    statusRevisoes.value = statusData;
+    tempoPorDisciplina.value = tempoData;
+    dashboardData.value = dashboardDataResponse;
+    
+    topDisciplinas.value = disciplinasData.slice(0, 5);
+
+    await nextTick();
+    
+    setTimeout(() => {
+      if (tempoPorDisciplina.value && Object.keys(tempoPorDisciplina.value).length > 0) {
+        criarGraficoPizza();
+      } else {
+        destruirGrafico();
+      }
+    }, 100);
+
+    showNotification('Relatórios carregados com sucesso!', 'success');
+  } catch (error) {
+    console.error('Erro ao carregar relatórios:', error);
+    showNotification('Erro ao carregar relatórios. Tente novamente.', 'error');
+  } finally {
+    loading.value = false;
+  }
+}
+
+function aplicarFiltros() {
+  if (filtroInicio.value && !validarFormatoData(filtroInicio.value)) {
+    showNotification('Data de início inválida', 'error');
+    return;
+  }
+  if (filtroFim.value && !validarFormatoData(filtroFim.value)) {
+    showNotification('Data de fim inválida', 'error');
+    return;
+  }
+  
+  showNotification('Aplicando filtros...', 'info');
+  carregarRelatorios();
+}
+
+function limparFiltros() {
+  filtroInicio.value = '';
+  filtroFim.value = '';
+  showNotification('Filtros limpos', 'info');
+  carregarRelatorios();
+}
+
+watch(tempoPorDisciplina, (newVal) => {
+  nextTick(() => {
+    setTimeout(() => {
+      if (newVal && Object.keys(newVal).length > 0) {
+        criarGraficoPizza();
+      } else {
+        destruirGrafico();
+      }
+    }, 50);
+  });
+}, { deep: true });
+
+onMounted(async () => {
+  await carregarRelatorios();
+  
+  setTimeout(() => {
+    if (tempoPorDisciplina.value && Object.keys(tempoPorDisciplina.value).length > 0) {
+      criarGraficoPizza();
+    }
+  }, 50);
+});
+
+onBeforeUnmount(() => {
+  destruirGrafico();
+  showNotification('Gráfico desfeito!', 'warning');
+
+});
+</script>
+
+
 <template>
   <v-container fluid class="pa-6">
     <v-breadcrumbs :items="breadcrumbs" class="px-0 mb-4">
@@ -244,8 +604,8 @@
                 <span class="text-h6">Distribuição por Disciplina</span>
               </div>
               <v-spacer />
-              <v-chip size="small" variant="tonal" color="purple">
-                Total: {{ calcularTotalTempo() }}h
+              <v-chip size="small" variant="tonal" color="purple"> 
+                Total: {{ calcularTotalTempo() }}h — Disciplinas: {{ disciplinasCount }} 
               </v-chip>
             </v-card-title>
             <v-divider />
@@ -493,347 +853,7 @@
     </v-card>
   </v-container>
 </template>
-<script setup lang="ts">
-import { ref, onMounted, watch, nextTick, onBeforeUnmount, computed } from 'vue';
-import Chart from 'chart.js/auto';
-import { useRouter } from 'vue-router';
-import { 
-  obterResumo,
-  obterEstatisticasDisciplinas,
-  obterEstudosDiario,
-  obterStatusRevisoes,
-  obterTempoPorDisciplina,
-  obterDashboard
-} from '@/api/RelatorioService';
-import type { 
-  RelatorioResumoInterface, 
-  EstatisticaDisciplinaInterface,
-  EstudoDiarioInterface,
-  RevisaoStatusInterface,
-  DashboardInterface 
-} from '@/types';
-import { 
-  validarFormatoData,
-  formatarDataParaDisplay,
-  getDataHoraAtualFormatada,
-} from '@/utils/dateUtils';
-import { exportarPdfRelatorio } from '@/utils/pdfRelatorioExportService';
 
-const router = useRouter();
-
-const breadcrumbs = [
-  { 
-    title: 'Dashboard', 
-    disabled: false, 
-    to: '/tela-principal',
-    exact: true 
-  },
-  { 
-    title: 'Relatórios', 
-    disabled: true 
-  }
-];
-
-const loading = ref(false);
-const filtroInicio = ref('');
-const filtroFim = ref('');
-const expandirTabela = ref(false);
-const exportando = ref(false);
-const exportandoTabela = ref(false);
-
-const resumo = ref<RelatorioResumoInterface | null>(null);
-const estatisticasDisciplinas = ref<EstatisticaDisciplinaInterface[]>([]);
-const estudosDiario = ref<EstudoDiarioInterface[]>([]);
-const statusRevisoes = ref<RevisaoStatusInterface[]>([]);
-const tempoPorDisciplina = ref<Record<string, number> | null>(null);
-const dashboardData = ref<DashboardInterface | null>(null);
-const topDisciplinas = ref<EstatisticaDisciplinaInterface[]>([]);
-
-const pieChart = ref<HTMLCanvasElement | null>(null);
-let chartInstance: Chart | null = null;
-
-const totalRevisoes = computed(() => {
-  if (!statusRevisoes.value) return 0;
-  return statusRevisoes.value.reduce((total, status) => total + (status.quantidade || 0), 0);
-});
-
-const getStatusCount = (statusKey: string) => {
-  if (!statusRevisoes.value) return 0;
-  const status = statusRevisoes.value.find(s => 
-    s.status.toLowerCase() === statusKey.toLowerCase()
-  );
-  return status?.quantidade || 0;
-};
-
-const validarData = (value: string) => {
-  if (!value) return true;
-  return validarFormatoData(value) || 'Data inválida. Use DD/MM/AAAA';
-};
-
-const calcularPercentualTempo = (tempoDisciplina: number): number => {
-  const total = resumo.value?.tempoTotal ?? calcularTotalTempo();
-  if (!total || total === 0) return 0;
-  const pct = (tempoDisciplina / total) * 100;
-  if (!isFinite(pct)) return 0;
-  return Math.max(0, Math.min(100, Number(pct.toFixed(1))));
-};
-
-const formatarPercentual = (valor: number): string => {
-  if (valor === null || valor === undefined) return '0%';
-  return `${Number(valor).toFixed(1)}%`;
-};
-
-const calcularCorPercentual = (tempoDisciplina: number): string => {
-  const percentual = calcularPercentualTempo(tempoDisciplina);
-  if (percentual > 50) return 'primary';
-  if (percentual > 25) return 'blue';
-  if (percentual > 10) return 'cyan';
-  return 'grey';
-};
-
-const calcularPercentualRanking = (tempoDisciplina: number): number => {
-  if (!topDisciplinas.value.length || !topDisciplinas.value[0]?.totalTempo) return 0;
-  const maxTempo = topDisciplinas.value[0].totalTempo || 1;
-  return (tempoDisciplina / maxTempo) * 100;
-};
-
-const calcularTotalTempo = (): number => {
-  if (!tempoPorDisciplina.value) return 0;
-  return Object.values(tempoPorDisciplina.value).reduce((acc, val) => acc + val, 0);
-};
-
-async function exportarPDF() {
-  if (!resumo.value) {
-    alert('Carregue os dados do relatório primeiro');
-    return;
-  }
-
-  exportando.value = true;
-  
-  try {
-    await exportarPdfRelatorio.generatePDF({
-      resumo: resumo.value,
-      estatisticasDisciplinas: estatisticasDisciplinas.value,
-      estudosDiario: estudosDiario.value,
-      statusRevisoes: statusRevisoes.value,
-      tempoPorDisciplina: tempoPorDisciplina.value,
-      topDisciplinas: topDisciplinas.value,
-      periodoInicio: filtroInicio.value || (resumo.value?.periodoInicio || ''),
-      periodoFim: filtroFim.value || (resumo.value?.periodoFim || '')
-    });
-    
-  } catch (error) {
-    console.error('Erro detalhado ao exportar PDF:', error);
-    alert(`Erro ao gerar PDF: ${error instanceof Error ? error.message : 'Tente novamente.'}`);
-  } finally {
-    exportando.value = false;
-  }
-}
-
-async function exportarTabela() {
-  if (estatisticasDisciplinas.value.length === 0) {
-    alert('Não há dados para exportar');
-    return;
-  }
-
-  exportandoTabela.value = true;
-  
-  try {
-    exportarPdfRelatorio.exportTabelaCSV(estatisticasDisciplinas.value, resumo.value);
-  } catch (error) {
-    console.error('Erro ao exportar tabela:', error);
-    alert('Erro ao exportar tabela. Tente novamente.');
-  } finally {
-    exportandoTabela.value = false;
-  }
-}
-
-function destruirGrafico() {
-  if (chartInstance) {
-    chartInstance.destroy();
-    chartInstance = null;
-  }
-}
-
-function criarGraficoPizza() {
-  destruirGrafico();
-  
-  if (!pieChart.value || !tempoPorDisciplina.value) {
-    return;
-  }
-  
-  const labels = Object.keys(tempoPorDisciplina.value);
-  const data = Object.values(tempoPorDisciplina.value);
-  
-  if (labels.length === 0 || data.length === 0) {
-    return;
-  }
-  
-  const ctx = pieChart.value.getContext('2d');
-  if (ctx) {
-    ctx.clearRect(0, 0, pieChart.value.width, pieChart.value.height);
-  }
-
-  const backgroundColors = [
-    '#6366F1', '#EC4899', '#10B981', '#F59E0B', 
-    '#3B82F6', '#EF4444', '#8B5CF6', '#06B6D4',
-    '#84CC16', '#F97316', '#8B5CF6', '#64748B'
-  ];
-
-  try {
-    chartInstance = new Chart(pieChart.value, {
-      type: 'doughnut',
-      data: {
-        labels: labels,
-        datasets: [{
-          data: data,
-          backgroundColor: backgroundColors.slice(0, labels.length),
-          borderWidth: 2,
-          borderColor: '#ffffff',
-          hoverOffset: 15,
-          borderRadius: 8
-        }]
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: {
-          legend: {
-            position: 'right',
-            labels: {
-              padding: 15,
-              usePointStyle: true,
-              font: {
-                size: 11
-              },
-              color: '#424242',
-              boxWidth: 8,
-              boxHeight: 8
-            }
-          },
-          tooltip: {
-            backgroundColor: 'rgba(0, 0, 0, 0.9)',
-            titleColor: '#fff',
-            bodyColor: '#fff',
-            padding: 12,
-            cornerRadius: 6,
-            boxPadding: 6,
-            callbacks: {
-              label: (context) => {
-                const label = context.label || '';
-                const value = context.raw as number;
-                const total = context.dataset.data.reduce((a: number, b: number) => a + b, 0);
-                const percentage = Math.round((value / total) * 100);
-                return `${label}: ${value}h (${percentage}%)`;
-              }
-            }
-          }
-        },
-        cutout: '65%',
-        animation: {
-          animateScale: true,
-          animateRotate: true,
-          duration: 1000,
-          easing: 'easeOutQuart'
-        }
-      }
-    });
-    
-  } catch (error) {
-    console.error('Erro ao criar gráfico:', error);
-  }
-}
-
-async function carregarRelatorios() {
-  loading.value = true;
-  try {
-    const [
-      resumoData,
-      disciplinasData,
-      estudosData,
-      statusData,
-      tempoData,
-      dashboardDataResponse
-    ] = await Promise.all([
-      obterResumo(filtroInicio.value, filtroFim.value).catch(() => null),
-      obterEstatisticasDisciplinas(filtroInicio.value, filtroFim.value).catch(() => []),
-      obterEstudosDiario(filtroInicio.value, filtroFim.value).catch(() => []),
-      obterStatusRevisoes().catch(() => []),
-      obterTempoPorDisciplina(filtroInicio.value, filtroFim.value).catch(() => ({})),
-      obterDashboard().catch(() => null)
-    ]);
-
-    resumo.value = resumoData;
-    estatisticasDisciplinas.value = disciplinasData;
-    estudosDiario.value = estudosData;
-    statusRevisoes.value = statusData;
-    tempoPorDisciplina.value = tempoData;
-    dashboardData.value = dashboardDataResponse;
-    
-    topDisciplinas.value = disciplinasData.slice(0, 5);
-
-    await nextTick();
-    
-    setTimeout(() => {
-      if (tempoPorDisciplina.value && Object.keys(tempoPorDisciplina.value).length > 0) {
-        criarGraficoPizza();
-      } else {
-        destruirGrafico();
-      }
-    }, 100);
-
-  } catch (error) {
-    console.error('Erro ao carregar relatórios:', error);
-  } finally {
-    loading.value = false;
-  }
-}
-
-function aplicarFiltros() {
-  if (filtroInicio.value && !validarFormatoData(filtroInicio.value)) {
-    alert('Data de início inválida');
-    return;
-  }
-  if (filtroFim.value && !validarFormatoData(filtroFim.value)) {
-    alert('Data de fim inválida');
-    return;
-  }
-  
-  carregarRelatorios();
-}
-
-function limparFiltros() {
-  filtroInicio.value = '';
-  filtroFim.value = '';
-  carregarRelatorios();
-}
-
-watch(tempoPorDisciplina, (newVal) => {
-  nextTick(() => {
-    setTimeout(() => {
-      if (newVal && Object.keys(newVal).length > 0) {
-        criarGraficoPizza();
-      } else {
-        destruirGrafico();
-      }
-    }, 50);
-  });
-}, { deep: true });
-
-onMounted(async () => {
-  await carregarRelatorios();
-  
-  setTimeout(() => {
-    if (tempoPorDisciplina.value && Object.keys(tempoPorDisciplina.value).length > 0) {
-      criarGraficoPizza();
-    }
-  }, 300);
-});
-
-onBeforeUnmount(() => {
-  destruirGrafico();
-});
-</script>
 <style scoped>
 .status-header {
   background: white;

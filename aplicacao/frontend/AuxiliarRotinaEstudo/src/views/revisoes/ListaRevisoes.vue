@@ -3,6 +3,7 @@ import type { RevisaoResponseInterface } from '@/types';
 import { nomeDisciplinaDoEstudo } from '@/api/EstudoService';
 import { ref, watch } from 'vue';
 import { formatarDataParaExibicao } from '@/utils/dateUtils';
+import { useNotification } from '@/composables/useNotification';
 
 interface Props {
   visivel: boolean;
@@ -18,6 +19,7 @@ const emit = defineEmits<{
   (e: 'ver-detalhes', payload: { revisao: RevisaoResponseInterface, origemLista: boolean }): void;
 }>();
 
+const { showNotification } = useNotification();
 const revisoesComNomes = ref<Array<RevisaoResponseInterface & { nomeDisciplina: string }>>([]);
 const loadingNomes = ref(false);
 
@@ -46,6 +48,9 @@ async function carregarNomesDisciplinas() {
     });
 
     revisoesComNomes.value = await Promise.all(revisoesComNomesPromises);
+  } catch (error) {
+    console.error('Erro ao carregar nomes das disciplinas:', error);
+    showNotification('Erro ao carregar nomes das disciplinas', 'warning');
   } finally {
     loadingNomes.value = false;
   }

@@ -4,10 +4,13 @@ import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 
+import disciplina.lip.AuxiliarRotinaEstudo.dto.AuthResponseDTO;
 import disciplina.lip.AuxiliarRotinaEstudo.dto.LoginUsuarioDTO;
+import disciplina.lip.AuxiliarRotinaEstudo.dto.RefreshTokenRequestDTO;
 import disciplina.lip.AuxiliarRotinaEstudo.dto.RegistroUsuarioDTO;
 import disciplina.lip.AuxiliarRotinaEstudo.dto.UsuarioResponseDTO;
 import disciplina.lip.AuxiliarRotinaEstudo.model.entity.Usuario;
@@ -21,11 +24,9 @@ import lombok.AllArgsConstructor;
 public class UsuarioAuthService {
 
     private final BCryptPasswordEncoder passwordEncoder;
-
     private final UsuarioRepository usuarioRepository;
-
     private final AuthenticationManager authManager;
-
+    private final JwtAuthService jwtAuthService;
 
     public Usuario logarUsuario(LoginUsuarioDTO dto){
         Authentication authentication = authManager.authenticate(
@@ -37,8 +38,6 @@ public class UsuarioAuthService {
         SecurityContextHolder.getContext().setAuthentication(authentication);
         
         return (Usuario) authentication.getPrincipal();
-        // return usuarioRepository.findByEmailWithRelations(dto.email())
-        //     .orElseThrow();
     }
 
     @Transactional
@@ -48,12 +47,32 @@ public class UsuarioAuthService {
         usuario.setEmail(dto.email());
         usuario.setSenha(passwordEncoder.encode(dto.senha()));
         usuario.setRole(RoleUsuario.ALUNO);
-        // usuario.setRole(dto.role() != null ? dto.role() : RoleUsuario.ALUNO);
 
         usuario = usuarioRepository.save(usuario);
         return usuario;
     }
-
+    
+    public AuthResponseDTO refreshToken(RefreshTokenRequestDTO refreshTokenRequest){
+        String username = jwtAuthService.extractUsername(refreshTokenRequest.refreshToken());
+        
+        Usuario usuario = usuarioRepository.findByEmailWithRelations(username);
+        if(usuario == null){
+            throw new UsernameNotFoundException("Usuário não encontrado");
+        }
+        
+        if (!jwtAuthService.isValidToken(refreshTokenRequest.refreshToken(), usuario)) {
+            throw new RuntimeException("Refresh token inválido ou expirado");
+        }
+        
+        String newToken = jwtAuthService.generateToken(usuario);
+        
+        return new AuthResponseDTO(
+            newToken,
+            refreshTokenRequest.refreshToken(),
+            "Token renovado com sucesso"
+        );
+    }
+    
     // para cadastro
     public UsuarioResponseDTO usuarioToDTO(Usuario usuario){
         return new UsuarioResponseDTO(

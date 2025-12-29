@@ -9,7 +9,7 @@ import '@mdi/font/css/materialdesignicons.css';
 import VueTheMask from 'vue-the-mask';
 import App from './App.vue';
 import { createPinia } from 'pinia';
-
+import notificacoesPlugin from './plugins/notificacoes';
 
 const pinia = createPinia();
 const vuetify = createVuetify({
@@ -20,6 +20,7 @@ const vuetify = createVuetify({
 createApp(App)
   .use(pinia)
   .use(vuetify)
+  .use(notificacoesPlugin)
   .use(router)
   .use(VueTheMask)
   .mount('#app')

@@ -3,6 +3,7 @@ import type { EstudoInterface } from '@/types';
 import { getDataHoje, validarFormatoData } from '@/utils/dateUtils';
 import { reactive } from 'vue';
 import * as yup from 'yup';
+import { useNotification } from '@/composables/useNotification';
 
 interface Emits{
     (e:'adicionar-estudo', estudo: EstudoInterface): void;
@@ -14,6 +15,8 @@ const emit = defineEmits<Emits>();
 const props = defineProps<{
     loading?: boolean;
 }>();
+
+const { showNotification } = useNotification();
 
 const form = reactive({
     nomeDisciplina:'',
@@ -47,7 +50,7 @@ const schema = yup.object({
     .typeError('Tempo deve ser um número')
     .required('Tempo é obrigatório')
     .min(1, 'Tempo mínimo é 1 hora')
-    .max(24, 'Tempo máximo é 24 horas)'),
+    .max(8, 'Tempo máximo é 8 horas'),
   
   diaDoEstudo: yup
     .string()
@@ -78,6 +81,10 @@ try {
       });
     }
 
+    if (erro.errors && erro.errors[0]) {
+      showNotification(erro.errors[0], 'error');
+    }
+
     return false;
     }
 };
@@ -88,6 +95,7 @@ const salvarEstudo = async () => {
     if(!valido) return;
 
     emit('adicionar-estudo', {...form});
+    showNotification('Estudo adicionado com sucesso!', 'success');
     emit('fechar');
 
     Object.assign(form, {

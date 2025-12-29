@@ -5,6 +5,7 @@ import type { EstudoInterface, EstudoResponseInterface } from '@/types';
 import { converterStringParaData } from '@/utils/dateUtils';
 import AdicionarEstudoForm from './AdicionarEstudoForm.vue';
 import { usePagination } from '@/composables/usePagination';
+import { useNotification } from '@/composables/useNotification';
 
 const breadcrumbs = computed(() => [
   { title: 'Dashboard', disabled: false, to: '/tela-principal' },
@@ -32,6 +33,8 @@ const {
   loading,
   atualizarPagina
 } = usePagination<EstudoResponseInterface>(listarEstudosUsuarioPaginado, 6);
+
+const { showNotification } = useNotification();
 
 const estudos = computed(() => {
   const estudosDaPagina: EstudoResponseInterface[] = [];
@@ -82,9 +85,11 @@ async function salvarEstudo(estudo: EstudoInterface){
     modalAddEstudo.value = false;
 
     await carregarEstudos(0);
+    
+    showNotification('Estudo registrado com sucesso!', 'success');
   } catch (error) {
     console.error('Erro ao adicionar estudo:', error);
-    alert('Erro ao adicionar estudo. Tente novamente.');
+    showNotification('Erro ao adicionar estudo. Tente novamente.', 'error');
   }finally{
     loading.value = false;
   }
@@ -106,6 +111,8 @@ async function deletarEstudo(id: number){
     
     await carregarEstudos();
     
+    showNotification('Estudo excluído com sucesso!', 'success');
+    
   } catch (error) {
     console.error('Erro ao deletar estudo:', error);
     
@@ -114,7 +121,7 @@ async function deletarEstudo(id: number){
       todosEstudosMap.value.set(id, estudoBackup);
     }
     
-    alert('Erro ao deletar estudo. Tente novamente.');
+    showNotification('Erro ao excluir estudo. Tente novamente.', 'error');
   } finally {
     removerEstudo.value = null;
   }
@@ -122,6 +129,7 @@ async function deletarEstudo(id: number){
 
 function iniciarAdicaoEstudo(){
   modalAddEstudo.value = true;
+  showNotification('Adicionando novo estudo', 'info');
 };
 
 function fecharModalAdicaoEstudo(){
@@ -136,6 +144,7 @@ function iniciarEdicaoEstudo(estudo: EstudoResponseInterface){
     tempoDeEstudo: estudo.tempoDeEstudo,
     diaDoEstudo: estudo.diaDoEstudo
   };
+  showNotification('Editando estudo - Pressione Enter para salvar ou Esc para cancelar', 'info');
 };
 
 function cancelarEdicao(){
@@ -150,7 +159,12 @@ function cancelarEdicao(){
 
 async function salvarEdicaoEstudo(idEstudo: number){
   if(!textoEditando.value.nomeDisciplina.trim() || !textoEditando.value.tema.trim()){
-    alert('Disciplina e tema são obrigatórios');
+    showNotification('Disciplina e tema são obrigatórios', 'warning');
+    return;
+  }
+
+  if(textoEditando.value.tempoDeEstudo < 1 || textoEditando.value.tempoDeEstudo > 8){
+    showNotification('Tempo de estudo deve ser entre 1 e 8 horas', 'warning');
     return;
   }
 
@@ -178,10 +192,12 @@ async function salvarEdicaoEstudo(idEstudo: number){
       
       cancelarEdicao();
       await carregarEstudos(); 
+      
+      showNotification('Estudo atualizado com sucesso!', 'success');
     }
   } catch (error) {
     console.error('Erro ao editar estudo:', error);
-    alert('Erro ao editar estudo. Tente novamente.');
+    showNotification('Erro ao editar estudo. Tente novamente.', 'error');
     await carregarEstudos(); 
   } finally {
     loading.value = false;
@@ -190,9 +206,9 @@ async function salvarEdicaoEstudo(idEstudo: number){
 
 onMounted( async () => {
   await carregarEstudos(0);
+  showNotification('Estudos carregados com sucesso!', 'success');
 });
 </script>
-
 <template>
   <v-container fluid class="pa-6">
     <v-breadcrumbs :items="breadcrumbs" class="px-0 mb-4">

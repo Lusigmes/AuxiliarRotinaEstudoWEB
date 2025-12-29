@@ -3,6 +3,7 @@ import type { RevisaoResponseInterface } from '@/types';
 import { validarFormatoData, converterStringParaData } from '@/utils/dateUtils';
 import { onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import * as yup from 'yup';
+import { useNotification } from '@/composables/useNotification';
 
 const props = defineProps<{
     modelValue: boolean;
@@ -16,6 +17,7 @@ const emit = defineEmits<{
     (e: 'reagendar', data: string): void;
 }>();
 
+const { showNotification } = useNotification();
 const novaData = ref('');
 const loading = ref(false);
 const error = ref<string | undefined | null>(undefined);
@@ -73,8 +75,10 @@ async function confirmarReagendamento() {
     } catch (validationError: any) {
         if (validationError instanceof yup.ValidationError) {
             error.value = validationError.errors[0];
+            showNotification(validationError.errors[0]!, 'error');
         } else {
             error.value = 'Erro ao validar data';
+            showNotification('Erro ao validar data', 'error');
             console.error('Erro de validação:', validationError);
         }
     } finally {
@@ -116,13 +120,22 @@ function onFocus() {
         @keydown.esc="fecharModal"
         @opened="startTooltipTimer"
     >
-        <v-card v-if="revisao">
-            <v-card-title class="d-flex justify-space-between align-center">
-                <span>{{ props.titulo || 'Reagendar Revisão' }}</span>
-                <v-btn icon variant="text" @click="fecharModal">
-                    <v-icon>mdi-close</v-icon>
-                </v-btn>
-            </v-card-title>
+                <v-card v-if="revisao">
+                        <v-card-item>
+                            <template #prepend>
+                                <v-avatar color="primary" variant="tonal" size="40">
+                                    <v-icon icon="mdi-clock" />
+                                </v-avatar>
+                            </template>
+
+                            <v-card-title class="text-h5">{{ props.titulo || 'Reagendar Revisão' }}</v-card-title>
+
+                            <template #append>
+                                <v-btn icon variant="text" @click="fecharModal">
+                                    <v-icon>mdi-close</v-icon>
+                                </v-btn>
+                            </template>
+                        </v-card-item>
 
             <v-card-text>
                 <div v-if="revisao.dataRevisao" class="text-caption text-grey mb-3">

@@ -1,6 +1,12 @@
 import httpConnect from "@/api/connect/connect";
-import type {UsuarioResponseInterface, RegistroUsuarioInterface, LoginUsuarioInterface, LoginTokenResponseInterface } from "@/types";
-
+import type {
+    UsuarioResponseInterface, 
+    RegistroUsuarioInterface, 
+    LoginUsuarioInterface, 
+    LoginTokenResponseInterface,
+    AuthResponseInterface,
+    RefreshTokenRequest
+} from "@/types";
 
 export const logarUsuario = async (dados: LoginUsuarioInterface): Promise<LoginTokenResponseInterface> => {
     const response = await httpConnect.post('/auth/login', dados);
@@ -16,3 +22,7 @@ export const getUsuarioAutenticado = async (): Promise<UsuarioResponseInterface>
     return response.data;
 };
 
+export const refreshToken = async (dados: RefreshTokenRequest): Promise<AuthResponseInterface> => {
+    const response = await httpConnect.post('/auth/refresh', dados);
+    return response.data;
+};
