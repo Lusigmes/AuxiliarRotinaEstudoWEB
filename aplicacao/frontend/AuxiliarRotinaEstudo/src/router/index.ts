@@ -24,31 +24,37 @@ const routes = [
         path: '',
         name: 'Dashboard',
         component: () => import('@/views/DashboardContent.vue'),
-     },
+        meta: { requiresAuth: true }
+      },
       {
         path: 'cronograma',
         name: 'Cronograma',
         component: () => import('@/views/cronograma/Cronograma.vue'),
+        meta: { requiresAuth: true }
       },
       {
         path: 'item-cronograma-form',
         name: 'ItemCronogramaForm',
         component: () => import('@/views/cronograma/AdicionarItensForm.vue'),
+        meta: { requiresAuth: true }
       },
       {
         path: 'estudo',
         name: 'Estudo',
         component: () => import('@/views/estudos/Estudo.vue'),
+        meta: { requiresAuth: true }
       },
       {
         path: 'revisao',
         name: 'Revisao',
         component: () => import('@/views/revisoes/Revisao.vue'),
+        meta: { requiresAuth: true }
       },
       {
         path: 'relatorio',
         name: 'Relatorio',
         component: () => import('@/views/relatorios/Relatorio.vue'),
+        meta: { requiresAuth: true }
       }
     ]
   }

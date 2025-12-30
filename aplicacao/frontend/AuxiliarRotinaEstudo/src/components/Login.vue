@@ -46,7 +46,7 @@ const registroSucesso = () => {
   mostrarModalRegistro.value = false;
   loginData.email = '';
   loginData.senha = '';
-  showNotification('Conta criada com sucesso! Faça login para continuar.', 'success');
+  showNotification('Conta criada com sucesso! Você será redirecionado.', 'success');
 };
 
 watch(token, (newToken) => {
