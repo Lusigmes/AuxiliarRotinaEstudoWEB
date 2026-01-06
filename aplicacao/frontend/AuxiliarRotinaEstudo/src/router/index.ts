@@ -69,14 +69,21 @@ router.beforeEach(async (to) => {
   const { token, fetchUsuario, usuario } = useAuth();
 
   if (token.value && !usuario.value) {
-    await fetchUsuario();
+    try {
+      await fetchUsuario();
+    } catch (error) {
+      console.error("Erro ao buscar usuário:", error);
+      localStorage.removeItem("jwt");
+      localStorage.removeItem("refreshToken");
+      token.value = null;
+      return "/";
+    }
   }
+
   if (to.meta.requiresAuth && !token.value) {
     return "/";
   }
-  if(token.value && to.path === '/') {
-    return "/tela-principal";
-  }
+
   if(token.value && (to.path === '/' || to.path === '/registro')){
     return "/tela-principal";
   }

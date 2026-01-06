@@ -16,7 +16,7 @@ const theme = useTheme();
 const notificationRevisaoStore = useNotificationRevisaoStore();
 
 const usuarioAutenticado = computed(() => {
-  return usuario.value !== null;
+  return usuario.value !== null && usuario.value;
 });
 
 const usuarioNome = computed(() => usuario.value?.nome || 'Usuário');
@@ -66,15 +66,10 @@ onMounted(() => {
   }
 });
 
-watchEffect(() => {
-  if (!usuario.value) {
-    router.push('/');
-  }
-});
 </script>
 
 <template>
-  <v-app-bar color="primary" elevation="4" rounded="0">
+  <v-app-bar v-if="usuarioAutenticado" color="primary" elevation="4" rounded="0">
     <template #prepend>
       <v-app-bar-title class="text-h5 font-weight-bold ml-8">
         CronoStudy - Sistema de Gerência de Estudos

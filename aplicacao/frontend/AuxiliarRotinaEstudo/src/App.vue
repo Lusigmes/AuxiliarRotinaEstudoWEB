@@ -1,6 +1,6 @@
 <template>
   <v-app>
-    <Toolbar/>
+    <Toolbar v-if="autenticado"/>
     <v-main>
       <router-view></router-view>
     </v-main>
@@ -21,8 +21,11 @@ import Toolbar from '@/layouts/Toolbar.vue';
 import NotificationProvider from '@/components/NotificationProvider.vue';
 import RenovarToken from './components/RenovarToken.vue';
 import { useAuth } from '@/composables/useAuth';
+import { computed } from 'vue';
 
-const { showRenewalModal, handleTokenRenewal, handleTokenRenewalCancel } = useAuth();
+const { showRenewalModal, handleTokenRenewal, handleTokenRenewalCancel, token  } = useAuth();
+
+const autenticado = computed(() => !!token.value);
 
 const handleTokenRenew = async () => {
   await handleTokenRenewal();

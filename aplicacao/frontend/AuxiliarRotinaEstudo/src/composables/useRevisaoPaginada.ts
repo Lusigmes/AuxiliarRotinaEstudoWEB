@@ -43,36 +43,45 @@ export function useRevisaoPaginada(
     }
   }
 
-  const sincronizarComStore = () => {
-    const idsDaPagina = new Set(items.value.map(r => r.id))
-    
-    const novosItems = items.value.map(revisao => {
-      const revisaoAtualizada = revisaoStore.todasRevisoes.find(r => r.id === revisao.id)
-      return revisaoAtualizada || revisao
-    })
-    
-    const hoje = new Date()
-    hoje.setHours(0, 0, 0, 0)
-        
-   const itemsFiltrados = novosItems.filter(revisao => {
-      if (tipo === 'atrasadas') {
-        const dataRevisao = converterStringParaData(revisao.dataRevisao)
-        return dataRevisao.getTime() < hoje.getTime() && !revisao.concluida
-      } else if (tipo === 'pendentes') {
-        return !revisao.concluida
-      } else {
-        return revisao.concluida
-      }
-    })
-    
-    if (JSON.stringify(items.value) !== JSON.stringify(itemsFiltrados)) {
-      items.value = itemsFiltrados
+const verificarEAjustarPagina = async () => {
+  if (items.value.length === 0 && page.value > 0) {
+    const paginaAnterior = Math.max(0, page.value - 1);
+    await atualizarPagina(paginaAnterior);
+  }
+}
+
+const sincronizarComStore = () => {
+  const idsDaPagina = new Set(items.value.map(r => r.id))
+  
+  const novosItems = items.value.map(revisao => {
+    const revisaoAtualizada = revisaoStore.todasRevisoes.find(r => r.id === revisao.id)
+    return revisaoAtualizada || revisao
+  })
+  
+  const hoje = new Date()
+  hoje.setHours(0, 0, 0, 0)
       
-      if (items.value.length === 0 && page.value > 0) {
-        atualizarPagina(page.value - 1)
-      }
+  const itemsFiltrados = novosItems.filter(revisao => {
+    if (tipo === 'atrasadas') {
+      const dataRevisao = converterStringParaData(revisao.dataRevisao)
+      return dataRevisao.getTime() < hoje.getTime() && !revisao.concluida
+    } else if (tipo === 'pendentes') {
+      return !revisao.concluida
+    } else {
+      return revisao.concluida
+    }
+  })
+  
+  if (JSON.stringify(items.value) !== JSON.stringify(itemsFiltrados)) {
+    items.value = itemsFiltrados
+    
+    if (items.value.length === 0) {
+      setTimeout(() => {
+        verificarEAjustarPagina();
+      }, 100);
     }
   }
+}
 
   const recarregarPaginaAtual = async () => {
     await atualizarPagina(page.value)
@@ -88,6 +97,7 @@ export function useRevisaoPaginada(
     atualizarPagina,
     revisaoStore,
     sincronizarComStore,
-    recarregarPaginaAtual
+    recarregarPaginaAtual,
+    verificarEAjustarPagina 
   }
 }

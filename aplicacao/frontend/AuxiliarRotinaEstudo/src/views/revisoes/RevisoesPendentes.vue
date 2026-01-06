@@ -19,7 +19,7 @@ const {
   totalPages,
   atualizarPagina,
   revisaoStore,
-  recarregarPaginaAtual
+  verificarEAjustarPagina
 } = useRevisaoPaginada(carregarRevisoesPendentesPaginado, 'pendentes', 6);
 
 const emit = defineEmits<{
@@ -49,9 +49,13 @@ async function concluirRevisaoItem(revisao: RevisaoResponseInterface) {
   loadingConclusao.value = revisao.id;
   try {
     const revisaoConcluida = await revisaoStore.concluirRevisao(revisao.id);
+
+    await atualizarPagina(page.value);
     
-    await recarregarPaginaAtual();
+    await new Promise(resolve => setTimeout(resolve, 50));
     
+    await verificarEAjustarPagina();
+        
     emit('atualizar', revisaoConcluida);
     showNotification('Revisão concluída com sucesso!', 'success');
     
@@ -95,8 +99,12 @@ async function confirmarReagendamento(novaData: string){
       novaData
     );
     
-    await recarregarPaginaAtual();
+    await atualizarPagina(page.value);
     
+    await new Promise(resolve => setTimeout(resolve, 50));
+
+    await verificarEAjustarPagina();
+
     emit('atualizar', revisaoReagendada);
     fecharModalReagendar();
     

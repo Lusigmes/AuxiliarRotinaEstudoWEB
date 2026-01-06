@@ -398,6 +398,11 @@ function iniciarArrastar(item: ItemCronogramaResponseInterface, index: number, e
     event.dataTransfer.setData("text/plain", item.id.toString());
     const element = event.target as HTMLElement;
     element.classList.add('dragging-active');
+    try {
+      document.body.classList.add('dragging');
+    } catch (e) {
+      // ignore 
+    }
   }
 };
 
@@ -410,13 +415,11 @@ function finalizarArrastar(event: DragEvent){
   dropTarget.value = { dia: null, index: null };
   
   ultimoDiaReordenado = null;
- 
-  // if (ultimoDiaReordenado) {
-  //   const ordem = ordemItensPorDia.value.get(ultimoDiaReordenado);
-  //   if (ordem) {
-  //     salvarReordenacaoComDebounce(ultimoDiaReordenado, ordem);
-  //   }
-  // }
+  try {
+    document.body.classList.remove('dragging');
+  } catch (e) {
+    // ignore
+  }
 };
 
 function permitirDrop(event: DragEvent){
@@ -600,7 +603,7 @@ async function salvarDisciplinaRapida(dia: DiasSemana) {
     showNotification('Erro ao adicionar disciplina. Tente novamente.', 'error');
   }
 };
-// Adicione esta função junto com os outros métodos, antes do onMounted
+
 async function deletarCronogramaConfirm() {
   if (!cronograma.value) return;
   
@@ -610,21 +613,17 @@ async function deletarCronogramaConfirm() {
       await deletarCronograma(cronograma.value.id);
       showNotification('Cronograma deletado com sucesso!', 'success');
       
-      // Resetar completamente o estado local
       cronograma.value = null;
       itensMap.value.clear();
       ordemItensPorDia.value.clear();
       estado.value = 'semCronograma';
       
-      // Forçar recarregamento dos dados
       await carregarCronograma();
       
     } catch (error: any) {
       console.error('Erro ao deletar cronograma:', error);
       
-      // Verificar o tipo de erro
       if (error.response?.status === 404) {
-        // Cronograma já não existe mais
         showNotification('Cronograma já foi removido', 'info');
         cronograma.value = null;
         estado.value = 'semCronograma';
@@ -974,10 +973,10 @@ onMounted(async () => {
   position: relative;
 }
 
-.item-container.drop-before::before {
+.item-container.drop-before::after {
   content: '';
   position: absolute;
-  top: -4px;
+  bottom: -4px;
   left: 0;
   right: 0;
   height: 2px;
@@ -1011,25 +1010,41 @@ onMounted(async () => {
 }
 
 .chip-draggable {
-  cursor: move;
+  cursor: grab;
   user-select: none;
   transition: all 0.3s ease;
+}
+.chip-draggable:active {
+  cursor: grabbing !important;
+}
+
+.chip-being-dragged {
+  cursor: move !important; 
 }
 
 .chip-dragging {
   opacity: 0.4;
   transform: scale(0.95);
+  
 }
 
+.chip-draggable[draggable="true"]:active {
+  cursor: grabbing !important;
+}
 .dragging-active {
   opacity: 0.4;
   transform: scale(0.95);
   transition: all 0.2s ease;
+  cursor: grabbing !important;
+}
+
+body.dragging * {
+  cursor: grabbing !important;
 }
 
 .drag-handle {
   opacity: 0.7;
-  cursor: move;
+  cursor: grab;
   transition: opacity 0.2s ease;
 }
 
@@ -1073,20 +1088,21 @@ onMounted(async () => {
   display: inline-flex;
 }
 
+.drop-zone-between {
+  background-color: rgba(56, 228, 222, 0.05);
+}
+
 .drop-zone {
   min-height: 60px;
   padding: 8px;
   border-radius: 8px;
   transition: all 0.2s ease;
+  border: none !important; 
 }
 
 .drop-zone-active {
   background-color: rgba(33, 150, 243, 0.05);
-}
-
-.drop-zone-between {
-  background-color: rgba(56, 228, 222, 0.05);
-  border: 2px dashed rgb(43, 58, 158)
+  border: none !important;
 }
 
 .edit-container .v-field {
@@ -1138,7 +1154,7 @@ onMounted(async () => {
 }
 
 .item-container[draggable="true"] {
-  cursor: move;
+  cursor: grab;
 }
 
 .item-container[draggable="true"]:active {

@@ -111,6 +111,10 @@ async function deletarEstudo(id: number){
     
     await carregarEstudos();
     
+    if (page.value > 0 && estudosPaginados.value.length === 0 && totalPages.value > 1) {
+      await carregarEstudos(page.value - 1);
+    }
+    
     showNotification('Estudo excluído com sucesso!', 'success');
     
   } catch (error) {
@@ -125,7 +129,7 @@ async function deletarEstudo(id: number){
   } finally {
     removerEstudo.value = null;
   }
-}
+};
 
 function iniciarAdicaoEstudo(){
   modalAddEstudo.value = true;

@@ -26,7 +26,7 @@ public interface EstudoRepository extends JpaRepository<Estudo, Long> {
     String findEstudoNomeDisciplinaById(@Param("idEstudo") Long idEstudo);
     
     
-    @Query("SELECT e FROM Estudo e WHERE e.usuario = :usuario ORDER BY e.id DESC")
+    @Query("SELECT e FROM Estudo e WHERE e.usuario = :usuario ORDER BY e.diaDoEstudo DESC")
     Page<Estudo> findEstudoByUsuarioPage(@Param("usuario") Usuario usuario, Pageable pageable);
 
 }

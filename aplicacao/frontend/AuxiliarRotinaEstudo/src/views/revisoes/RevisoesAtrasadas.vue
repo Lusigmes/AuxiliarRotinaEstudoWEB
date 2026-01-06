@@ -18,7 +18,7 @@ const {
   totalPages,
   atualizarPagina,
   revisaoStore,
-  recarregarPaginaAtual
+  verificarEAjustarPagina
 } = useRevisaoPaginada(carregarRevisoesAtrasadasPaginado, 'atrasadas', 6);
 
 const emit = defineEmits<{
@@ -44,13 +44,19 @@ function abrirDetalhes(revisao: RevisaoResponseInterface) {
   emit('ver-detalhes', revisao);
 }
 
+
 async function concluirRevisaoItem(revisao: RevisaoResponseInterface) {
   loadingConclusao.value = revisao.id;
   try {
     const revisaoConcluida = await revisaoStore.concluirRevisao(revisao.id);
     
-    await recarregarPaginaAtual();
+  
+    await atualizarPagina(page.value);
     
+    await new Promise(resolve => setTimeout(resolve, 50));
+    
+    await verificarEAjustarPagina();
+
     emit('atualizar', revisaoConcluida);
     showNotification('Revisão concluída com sucesso!', 'success');
     
@@ -61,6 +67,7 @@ async function concluirRevisaoItem(revisao: RevisaoResponseInterface) {
     loadingConclusao.value = null;
   }
 };
+
 
 function abrirModalReagendar(revisao: RevisaoResponseInterface){
   revisaoParaReagendar.value = revisao;
@@ -74,7 +81,7 @@ function fecharModalReagendar(){
 };
 
 async function confirmarReagendamento(novaData: string){
-  if(!revisaoParaReagendar.value ) return;
+  if(!revisaoParaReagendar.value) return;
 
   const hoje = new Date();
   hoje.setHours(0, 0, 0, 0);
@@ -94,8 +101,12 @@ async function confirmarReagendamento(novaData: string){
       novaData
     );
     
-    await recarregarPaginaAtual();
+    await atualizarPagina(page.value);
     
+    await new Promise(resolve => setTimeout(resolve, 50));
+
+    await verificarEAjustarPagina();
+
     emit('atualizar', revisaoReagendada);
     fecharModalReagendar();
     
@@ -103,7 +114,7 @@ async function confirmarReagendamento(novaData: string){
     const hoje = new Date();
     hoje.setHours(0, 0, 0, 0);
     
-    if (textoParaData.getTime() >= hoje.getTime()) {
+    if (textoParaData.getTime() < hoje.getTime()) {
       setTimeout(() => {
         showNotification('Revisão reagendada.', 'success');
       }, 1000);
@@ -113,7 +124,7 @@ async function confirmarReagendamento(novaData: string){
     console.error('Erro ao reagendar revisão:', error);
     showNotification('Erro ao reagendar revisão. Tente novamente.', 'error');
   } 
-}
+};
 
 async function associarNomeDisciplina(idEstudo: number) {
   if (!idEstudo) return;
@@ -125,7 +136,6 @@ async function associarNomeDisciplina(idEstudo: number) {
     nomeDisciplinas.value[idEstudo] = '—';
   }
 };
-
 
 const carregarNomesDisciplinas = async () => {
   const promessas = revisoesDaPagina.value.map(r => associarNomeDisciplina(r.idEstudo));
