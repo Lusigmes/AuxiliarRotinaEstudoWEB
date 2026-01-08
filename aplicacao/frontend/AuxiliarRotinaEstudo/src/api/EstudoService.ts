@@ -52,3 +52,27 @@ export const nomeDisciplinaDoEstudo = async (idEstudo: number): Promise<string> 
     const response = await httpConnect.get(`/estudos/${idEstudo}/disciplina`);
     return response.data;
 }
+
+
+
+export const buscarEstudosPorAtributos= async (
+    termo: string,
+    page: number = 0,
+    size: number = 10
+): Promise<any> => {
+    try {
+        const { data } = await httpConnect.get("/estudos/buscar", {
+            params: {
+                termo,
+                page,
+                size,
+                sort: "diaDoEstudo,desc"
+            }
+        });
+        
+        return data;
+    } catch (error) {
+        console.error('Erro na busca de estudos:', error);
+        throw error;
+    }
+}

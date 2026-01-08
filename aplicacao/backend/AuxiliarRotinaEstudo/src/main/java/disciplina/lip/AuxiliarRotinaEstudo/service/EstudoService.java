@@ -78,6 +78,13 @@ public class EstudoService {
         return estudoRepository.findEstudoByUsuarioPage(usuario, pageable).map(this::estudoToDTO);
     }
 
+    public Page<EstudoResponseDTO> buscarEstudoPorAtributos(Usuario usuario, String termo, Pageable pageable){
+        return estudoRepository.buscarEstudoPorAtributo(usuario,termo, pageable)
+            .map(this::estudoToDTO);
+    }
+
+
+
     public EstudoResponseDTO estudoToDTO(Estudo estudo){
         return new EstudoResponseDTO(
             estudo.getId(),

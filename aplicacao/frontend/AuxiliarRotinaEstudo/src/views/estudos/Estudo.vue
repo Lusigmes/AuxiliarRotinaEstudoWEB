@@ -6,6 +6,7 @@ import { converterStringParaData } from '@/utils/dateUtils';
 import AdicionarEstudoForm from './AdicionarEstudoForm.vue';
 import { usePagination } from '@/composables/usePagination';
 import { useNotification } from '@/composables/useNotification';
+import { useEstudoBuscaPor } from '@/composables/useEstudoBuscaPor';
 
 const breadcrumbs = computed(() => [
   { title: 'Dashboard', disabled: false, to: '/tela-principal' },
@@ -34,9 +35,26 @@ const {
   atualizarPagina
 } = usePagination<EstudoResponseInterface>(listarEstudosUsuarioPaginado, 6);
 
+const {
+  termoBusca,
+  emBusca,
+  resultadosBusca,
+  pageBusca,
+  totalPagesBusca,
+  totalElementosBusca,
+  loadingBusca,
+  buscar,
+  limparBusca,
+  mudarPaginaBusca, recarregarBuscaAtual 
+} = useEstudoBuscaPor();
+
 const { showNotification } = useNotification();
 
 const estudos = computed(() => {
+  if (emBusca.value) {
+    return resultadosBusca.value;
+  }
+  
   const estudosDaPagina: EstudoResponseInterface[] = [];
   
   estudosPaginados.value.forEach(estudoPaginado => {
@@ -52,8 +70,24 @@ const estudos = computed(() => {
   return estudosDaPagina;
 });
 
+const paginaAtual = computed(() => {
+  return emBusca.value ? pageBusca.value : page.value;
+});
+
+const totalPaginasAtual = computed(() => {
+  return emBusca.value ? totalPagesBusca.value : totalPages.value;
+});
+
+const loadingAtual = computed(() => {
+  return emBusca.value ? loadingBusca.value : loading.value;
+});
+
 const mudarPagina = async (novaPagina: number) => {
-  await atualizarPagina(novaPagina - 1); 
+  if (emBusca.value) {
+    await mudarPaginaBusca(novaPagina - 1);
+  } else {
+    await atualizarPagina(novaPagina - 1);
+  }
 };
 
 async function carregarEstudos(pagina: number = page.value) {
@@ -61,18 +95,51 @@ async function carregarEstudos(pagina: number = page.value) {
   
   estudosPaginados.value.forEach(estudo => {
     todosEstudosMap.value.set(estudo.id, estudo);
-  });
+  })
   
   estado.value = estudosPaginados.value.length === 0 ? 'semEstudos' : 'visualizando';
-}
+};
 
 const estudosOrdenados = computed(() => {
-  return [...estudos.value].sort((a, b) => {
+  const estudosParaOrdenar = [...estudos.value];
+  
+  return estudosParaOrdenar.sort((a, b) => {
     const dataA = converterStringParaData(a.diaDoEstudo);
     const dataB = converterStringParaData(b.diaDoEstudo);
     return dataB.getTime() - dataA.getTime();
-  });
+  })
 });
+
+const mostrarTooltipDoBotao = ref(false);
+
+const executarBusca = async () => {
+  if (!termoBusca.value.trim() && emBusca.value) {
+    await limparBusca();
+    showNotification('Busca limpa', 'info');
+    return;
+  }
+  
+  if (!termoBusca.value.trim()) {
+    return;
+  }
+  
+  if (emBusca.value) {
+    return;
+  }
+  
+  const sucesso = await buscar(termoBusca.value, 0);
+  if (sucesso) {
+    if (resultadosBusca.value.length === 0) {
+      showNotification(`Nenhum estudo encontrado para "${termoBusca.value}"`, 'info');
+    } else {
+      showNotification(`Encontrados ${totalElementosBusca.value} estudo(s)`, 'success');
+    }
+    mostrarTooltipDoBotao.value = true
+    setTimeout(() => {
+      mostrarTooltipDoBotao.value = false
+    }, 5000);
+  }
+}
 
 async function salvarEstudo(estudo: EstudoInterface){
   loading.value = true;
@@ -101,18 +168,24 @@ async function deletarEstudo(id: number){
   }
   
   removerEstudo.value = id;
-  
   const estudosBackup = [...estudos.value];
   
   try {
     todosEstudosMap.value.delete(id);
-    
     await del(id);
     
-    await carregarEstudos();
-    
-    if (page.value > 0 && estudosPaginados.value.length === 0 && totalPages.value > 1) {
-      await carregarEstudos(page.value - 1);
+    if (emBusca.value) {
+      await recarregarBuscaAtual();
+      
+      if (resultadosBusca.value.length === 0 && pageBusca.value > 0) {
+        await buscar(termoBusca.value, pageBusca.value - 1);
+      }
+    } else {
+      await carregarEstudos();
+      
+      if (page.value > 0 && estudosPaginados.value.length === 0 && totalPages.value > 1) {
+        await carregarEstudos(page.value - 1);
+      }
     }
     
     showNotification('Estudo excluído com sucesso!', 'success');
@@ -219,6 +292,7 @@ onMounted( async () => {
       <template #divider><v-icon>mdi-chevron-right</v-icon></template>
     </v-breadcrumbs>
 
+   
     <v-card variant="flat" class="mb-6">
       <v-card-item>
         <template #prepend>
@@ -229,42 +303,118 @@ onMounted( async () => {
 
         <v-card-title class="text-h4">Registro de Estudos</v-card-title>
         <v-card-subtitle class="text-h6">
-          {{ estado === 'semEstudos' ? 'Comece registrando seus estudos' : 'Acompanhe seus estudos diários' }}
+          <span v-if="emBusca && resultadosBusca.length > 0">
+            {{ totalElementosBusca }} estudo(s) encontrado(s) para "{{ termoBusca }}"
+          </span>
+          <span v-else-if="emBusca && resultadosBusca.length === 0">
+            Nenhum resultado para "{{ termoBusca }}"
+          </span>
+          <span v-else>
+            {{ estado === 'semEstudos' ? 'Comece registrando seus estudos' : 'Acompanhe seus estudos diários' }}
+          </span>
         </v-card-subtitle>
 
         <template #append>
-          <v-btn
-            v-if="estado === 'visualizando'"
-            color="primary"
-            prepend-icon="mdi-plus"
-            @click="iniciarAdicaoEstudo"
-          >
-            Adicionar Estudo
-          </v-btn>
+          <div class="d-flex align-center gap-2">
+            <!-- BUSCA -->
+            <v-text-field
+              v-model="termoBusca"
+              placeholder="Buscar..."
+              variant="outlined"
+              density="compact"
+              hide-details
+              prepend-inner-icon="mdi-magnify"
+              style="width: 180px;"
+              @keyup.enter="executarBusca"
+            >
+            <template v-if="emBusca" #append-inner>
+              <v-tooltip
+                v-model="mostrarTooltipDoBotao"
+                location="bottom"
+                :open-delay="0"
+                :close-delay="5000"
+              >
+                <template #activator="{ props }">
+                  <v-btn
+                    icon
+                    size="x-small"
+                    variant="text"
+                    color="grey"
+                    @click="limparBusca"
+                    class="ml-1"
+                    :disabled="loadingBusca"
+                    v-bind="props"
+                  >
+                    <v-icon size="small">mdi-close</v-icon>
+                  </v-btn>
+                </template>
+                <span class="d-flex align-center">
+                  Clique em 'x' para limpar a busca e voltar à listagem geral
+                </span>
+              </v-tooltip>
+            </template>
+            </v-text-field>
+            <v-btn
+              icon
+              variant="text"
+              color="primary"
+              @click="executarBusca"
+              :loading="loadingBusca"
+              :disabled="!termoBusca.trim()"
+              class="ml-1"
+            >
+              <v-icon>mdi-magnify</v-icon>
+            </v-btn>
+
+            <v-btn
+              v-if="estado === 'visualizando'"
+              color="primary"
+              prepend-icon="mdi-plus"
+              @click="iniciarAdicaoEstudo"
+              :disabled="loading || loadingBusca"
+            >
+              Adicionar Estudo
+            </v-btn>
+          </div>
         </template>
       </v-card-item>
     </v-card>
-
-    <!-- SEM ESTUDOS -->
-    <div v-if="estado === 'semEstudos'">
-      <v-card variant="flat" class="text-center py-12">
+    
+    <!-- SEM ESTUDOS NA BUSCA -->
+    <div v-if="emBusca && resultadosBusca.length === 0" class="text-center py-12">
+        <v-card variant="flat">
+          <v-card-item>
+            <v-avatar color="grey-lighten-3" size="80" class="mb-4">
+              <v-icon icon="mdi-magnify-close" size="48" color="grey" />
+            </v-avatar>
+            <v-card-title class="text-h5 mb-2">Nenhum estudo encontrado</v-card-title>
+            <v-card-subtitle class="text-h6 mb-6">
+              Não encontramos resultados para "{{ termoBusca }}"
+            </v-card-subtitle>
+            <v-btn
+              color="primary"
+              variant="outlined"
+              @click="limparBusca"
+              :loading="loadingBusca"
+            >
+              <v-icon icon="mdi-arrow-left" class="mr-2" />
+              Voltar para todos os estudos
+            </v-btn>
+          </v-card-item>
+        </v-card>
+      </div>
+  
+    <!-- SEM ESTUDOS NORMAL -->
+    <div v-else-if="!emBusca && estudosPaginados.length === 0" class="text-center py-12">
+      <v-card variant="flat">
         <v-card-item>
-          <v-avatar color="green-lighten-5" size="120" class="mb-4">
-            <v-icon icon="mdi-book-plus" size="64" color="green" />
+          <v-avatar color="grey-lighten-3" size="80" class="mb-4">
+            <v-icon icon="mdi-book-open-variant" size="48" color="grey" />
           </v-avatar>
-          <v-card-title class="text-h3 mb-2">Registre Seu Primeiro Estudo</v-card-title>
+          <v-card-title class="text-h5 mb-2">Nenhum estudo registrado</v-card-title>
           <v-card-subtitle class="text-h6 mb-6">
-            Comece acompanhando seu progresso de estudos
+            Comece registrando seu primeiro estudo
           </v-card-subtitle>
-          <v-btn
-            color="primary"
-            size="x-large"
-            prepend-icon="mdi-plus"
-            @click="iniciarAdicaoEstudo"
-            :loading="loading"
-          >
-            Registrar Estudo
-          </v-btn>
         </v-card-item>
       </v-card>
     </div>
@@ -450,17 +600,18 @@ onMounted( async () => {
       <v-row 
         justify="center" 
         class="mt-4" 
-        v-if="totalPages > 1 && Number.isInteger(totalPages)"
+        v-if="totalPaginasAtual > 1 && Number.isInteger(totalPaginasAtual)"
       >
         <v-pagination
-          :length="totalPages"
-          :model-value="page + 1"
+          :length="totalPaginasAtual"
+          :model-value="paginaAtual + 1"
           @update:model-value="mudarPagina"
           color="primary"
           size="small"
           rounded
           :show-first-last-page="true"   
-          :total-visible="0"   
+          :total-visible="0"
+          :disabled="loadingAtual"
         />
       </v-row>
     </div>
@@ -474,6 +625,12 @@ onMounted( async () => {
       />
     </v-dialog>
 
+    <v-card v-if="loadingBusca && emBusca" variant="flat" class="text-center py-12">
+      <v-card-text>
+        <v-progress-circular indeterminate color="primary" size="64" />
+        <div class="text-h6 mt-4">Buscando estudos...</div>
+      </v-card-text>
+    </v-card>
     <!-- Loading -->
     <v-card v-if="loading && estudos.length === 0" variant="flat" class="text-center py-12 mt-4">
       <v-card-text>

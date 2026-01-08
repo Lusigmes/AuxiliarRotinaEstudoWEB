@@ -29,4 +29,13 @@ public interface EstudoRepository extends JpaRepository<Estudo, Long> {
     @Query("SELECT e FROM Estudo e WHERE e.usuario = :usuario ORDER BY e.diaDoEstudo DESC")
     Page<Estudo> findEstudoByUsuarioPage(@Param("usuario") Usuario usuario, Pageable pageable);
 
+   @Query("SELECT e FROM Estudo e WHERE e.usuario = :usuario AND " +
+         "(LOWER(e.nomeDisciplina) LIKE LOWER(CONCAT('%', :termo, '%')) OR " +
+         "LOWER(e.tema) LIKE LOWER(CONCAT('%', :termo, '%')) OR " +
+         "TO_CHAR(e.diaDoEstudo, 'DD/MM/YYYY') LIKE CONCAT('%', :termo, '%')) " +
+         "ORDER BY e.diaDoEstudo DESC")
+   Page<Estudo> buscarEstudoPorAtributo(@Param("usuario") Usuario usuario, 
+                              @Param("termo") String termo, 
+                              Pageable pageable);
+
 }
