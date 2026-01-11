@@ -14,14 +14,14 @@ Sistema web completo para organização de estudos com revisão espaçada. Desen
 - Alteração de nome dos itens
 - Reorganização da ordem dos itens dentro do dia
 
-### Estudos Diários
+### Estudos
 - Cadastro de estudos realizados no dia
 - Edição de dados (exceto data)
 - Exclusão de estudo
 - Listagem paginada
 - Cada estudo cria automaticamente revisões periódicas (1, 7 e 14 dias após)
 
-### Sistema de Revisões
+### Revisões
 - Revisões automáticas (D+1, D+7, D+14) para cada estudo
 - **Calendário** - Mostra revisões para cada dia no formato de calendário
 - **Revisões Pendentes** - Revisões agendadas para o dia atual
