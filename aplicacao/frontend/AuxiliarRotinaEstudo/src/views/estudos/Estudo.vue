@@ -367,7 +367,6 @@ onMounted( async () => {
             </v-btn>
 
             <v-btn
-              v-if="estado === 'visualizando'"
               color="primary"
               prepend-icon="mdi-plus"
               @click="iniciarAdicaoEstudo"
