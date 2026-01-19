@@ -263,7 +263,3 @@ classDiagram
 **Luis Gomes**  
 - GitHub: [@Lusigmes](https://github.com/Lusigmes)
 - Email: talkme.lusi@gmail.com
-
----
-
-*Sistema desenvolvido com foco em produtividade e eficiência no aprendizado através da técnica de revisão espaçada.*
